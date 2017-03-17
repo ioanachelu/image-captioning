@@ -16,6 +16,11 @@ import sys
 import nltk.tokenize
 import numpy as np
 import random
+import pickle
+from datetime import datetime
+from image_decoder import ImageDecoder
+
+IMG_MEAN = np.array((98, 97, 101), dtype=np.float32)
 
 class Vocabulary():
     def __init__(self, vocab_dict, unk_id):
@@ -36,13 +41,15 @@ class Preprocesser():
         # create vocabulary from training captions
         vocab = self.create_vocab(mscoco_train_dataset)
 
-        spreadout_train_dataset = [(tuples[0], tuples[1], [caption, [vocab.get_id(word) for word in caption]]) for tuples in mscoco_train_dataset for caption in tuples[2]]
-        spreadout_test_dataset = [(tuples[0], tuples[1], [caption, [vocab.get_id(word) for word in caption]]) for tuples in mscoco_val_dataset for caption in
+        spreadout_train_dataset = [[tuples[0], tuples[1], caption, [vocab.get_id(word) for word in caption]] for tuples in mscoco_train_dataset for caption in tuples[2]]
+        spreadout_test_dataset = [[tuples[0], tuples[1], caption, [vocab.get_id(word) for word in caption]] for tuples in mscoco_val_dataset for caption in
                                    tuples[2]]
         print("finished preprocessing")
         print("started saving the preprocessed data")
-        np.save("./mscoco/train.npy", spreadout_train_dataset)
-        np.save("./mscoco/test.npy", spreadout_test_dataset)
+        pickle.dump(spreadout_train_dataset, open("./mscoco/train.pkl", 'wb'))
+        # np.save("./mscoco/train.npy", np.asarray(spreadout_train_dataset))
+        # np.save("./mscoco/test.npy", np.asarray(spreadout_test_dataset))
+        pickle.dump(spreadout_test_dataset, open("./mscoco/test.pkl", 'wb'))
         print("end saving the preprocessed data")
 
     def preprocess_data(self, images_dir, captions_file):

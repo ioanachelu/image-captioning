@@ -54,6 +54,11 @@ mscoco
 summaries/
 summaries_copy/
 test_summaries/
+embedding_models/
+annotations/
+train2014/
+val2014/
+captions_train-val2014.zip
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

@@ -6,7 +6,6 @@ import flags
 import os
 from preprocessing import Preprocesser
 from model import ImageCaptioningModel
-from image_reader import ImageReader
 import os
 FLAGS = tf.app.flags.FLAGS
 
@@ -26,31 +25,33 @@ def recreate_directory_structure():
             tf.gfile.DeleteRecursively(FLAGS.summaries_dir)
             tf.gfile.MakeDirs(FLAGS.summaries_dir)
 
-    if not tf.gfile.Exists("./mscoco/train.npy") or \
-            not tf.gfile.Exists("./mscoco/test.npy"):
+    if not tf.gfile.Exists("./mscoco/train.pkl") or \
+            not tf.gfile.Exists("./mscoco/test.pkl"):
         preprocesser = Preprocesser()
         preprocesser.run()
 
 def run():
     recreate_directory_structure()
-    # Create queue coordinator.
-    coord = tf.train.Coordinator()
+    g = tf.Graph()
+    with g.as_default():
+        # Create queue coordinator.
+        coord = tf.train.Coordinator()
 
-    # Load reader.
-    with tf.name_scope("create_inputs"):
-        reader = ImageReader(
-            os.path.join(FLAGS.dataset_path, "train.npy"),
-            True,
-            coord)
+        net = ImageCaptioningModel()
 
-    image_batch, captions_list_batch = reader.dequeue(FLAGS.batch_size)
+        net.setup()
 
-    global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False)
-    # stop_training = Value('i', 0)
-    net = ImageCaptioningModel({'data': image_batch}, global_step)
-    # evaluator = Evaluator(stop_training)
-    # evaluator.start()
-    net.train(image_batch, captions_list_batch, coord)
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        sess = tf.Session(graph=g, config=config)
+
+        # Start queue threads.
+        threads = tf.train.start_queue_runners(coord=coord, sess=sess)
+
+        net.train(sess, g)
+
+        coord.request_stop()
+        coord.join(threads)
 
 
 if __name__ == '__main__':
