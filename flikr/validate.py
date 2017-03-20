@@ -28,8 +28,7 @@ def recreate_directory_structure():
 
 
 def run():
-    recreate_directory_structure()
-    feats, captions = get_caption_data(mode="train")
+    feats, captions = get_caption_data(mode="val")
     index = np.arange(len(feats))
     np.random.shuffle(index)
 
@@ -54,7 +53,7 @@ def run():
         n_words=n_words,
         bias_init_vector=bias_init_vector)
 
-    loss, image, sentence, mask, generated_sentence = network.build_model()
+    loss, image, sentence, mask = network.build_model()
     global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False)
     train_op = network.train(global_step)
     summary_writer, summaries = network.summary()
@@ -89,13 +88,11 @@ def run():
             for ind, row in enumerate(current_mask_matrix):
                 row[:nonzeros[ind]] = 1
 
-            _, loss_value, summary, _, gen_sent = sess.run([train_op, loss, summaries, increment_global_step, generated_sentence], feed_dict={
+            _, loss_value, summary, _ = sess.run([train_op, loss, summaries, increment_global_step], feed_dict={
                 image: current_feats,
                 sentence: current_caption_matrix,
                 mask: current_mask_matrix,
                 })
-            print("target_sent: ", current_captions)
-            print("gen_sent: ", gen_sent)
             if step_count % FLAGS.checkpoint_every == 0:
                 saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
             if step_count % FLAGS.summary_every == 0:

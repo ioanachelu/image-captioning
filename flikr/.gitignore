@@ -8,5 +8,5 @@ summaries/*
 models_copy/*
 acoustic-guitar-player.jpg
 *.tar
-
+*.npy
 

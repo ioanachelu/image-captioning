@@ -11,11 +11,11 @@ def randomize_and_split():
     annotations = pd.read_table(FLAGS.annotation_path, sep='\t', header=None, names=['image', 'caption'])
     captions = annotations['caption'].values
 
-    index = np.arange(len(feats))
-    np.random.shuffle(index)
+    # index = np.arange(len(feats))
+    # np.random.shuffle(index)
 
-    feats = feats[index]
-    captions = captions[index]
+    # feats = feats[index]
+    # captions = captions[index]
 
     train_feats = feats[:28000]
     np.save("./data/train_feats.npy", train_feats)

@@ -37,7 +37,7 @@ class ShowAndTell():
         image_emb = tf.matmul(image, self.encode_img_W) + self.encode_img_b  # (batch_size, dim_hidden)
 
         ema = tf.train.ExponentialMovingAverage(FLAGS.moving_average_decay, name='loss_avg')
-
+        generated_words = []
         with tf.variable_scope("lstm") as lstm_scope:
             zero_state = self.lstm.zero_state(batch_size=self.batch_size, dtype=tf.float32)
             _, state = self.lstm(image_emb, zero_state)
@@ -64,6 +64,9 @@ class ShowAndTell():
                 # Add summaries.
                 tf.summary.scalar("losses/batch_loss_raw", batch_loss_per_word)
 
+                max_prob_word = tf.argmax(logit_words, 1)
+                generated_words.append(max_prob_word)
+
         total_loss = tf.losses.get_total_loss()
         total_loss = total_loss / tf.reduce_sum(mask[:, 1:])
         tf.summary.scalar("losses/total_loss", total_loss)
@@ -74,8 +77,9 @@ class ShowAndTell():
             tf.summary.histogram("parameters/" + var.op.name, var)
 
         self.loss = total_loss
-
-        return total_loss, image, sentence, mask
+        generated_words = tf.stack(generated_words, axis=1)
+        generated_words = tf.boolean_mask(generated_words, mask[:, 0])
+        return total_loss, image, sentence, mask, tf.stack(generated_words, axis=1)
 
     def train(self, global_step):
         all_trainable = [v for v in tf.trainable_variables() if 'beta' not in v.name and 'gamma' not in v.name]
