@@ -1,0 +1,12 @@
+*.pyc
+models/*
+data/*
+models/*
+models_copy/*
+images/*
+summaries/*
+models_copy/*
+acoustic-guitar-player.jpg
+*.tar
+
+

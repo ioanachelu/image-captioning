@@ -46,12 +46,12 @@ wheels/
 
 
 models (copy)/
-models/
+flikr/models/
 roi_pooling_layer/__pycache__/
 roi_pooling_layer/roi_pooling.so
 roi_pooling_layer/roi_pooling_op.cu.o
 mscoco
-summaries/
+flikr/summaries/
 summaries_copy/
 test_summaries/
 embedding_models/
@@ -129,10 +129,10 @@ ENV/
 .ropeproject
 
 
-data/
-flickr30k-images.tar
-images/
-img6.jpg
-img8.jpg
-models_copy/
+flikr/data/
+flikr/flickr30k-images.tar
+flikr/images/
+flikr/img6.jpg
+flikr/img8.jpg
+flikr/models_copy/
 .idea/vcs.xml
