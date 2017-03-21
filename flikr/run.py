@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from keras.preprocessing import sequence
 import time
-from utils import get_caption_data, preprocess_captions, load_model
+from utils import get_caption_data, preprocess_captions, load_model, compute_bleu_score_for_batch, create_eval_json
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -29,12 +29,13 @@ def recreate_directory_structure():
 
 def run():
     recreate_directory_structure()
-    feats, captions = get_caption_data(mode="train")
+    feats, captions, filenames_to_captions = get_caption_data(mode="train")
     index = np.arange(len(feats))
     np.random.shuffle(index)
 
     feats = feats[index]
     captions = captions[index]
+    filenames_to_captions = filenames_to_captions[index]
 
     word_to_index, index_to_word, bias_init_vector = preprocess_captions(captions)
 
@@ -61,6 +62,7 @@ def run():
     global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False)
     train_op = network.train(global_step, num_examples_per_epoch)
     summary_writer, summaries = network.summary()
+    summary_bleu = tf.Summary()
 
     saver = tf.train.Saver(max_to_keep=50)
 
@@ -99,16 +101,22 @@ def run():
                 })
 
             gen_sent = [index_to_word[caption_id] for caption_id in gen_sent if caption_id in index_to_word]
-
+            bleu_score = compute_bleu_score_for_batch(gen_sent, start, end, filenames_to_captions)
             # print("target_sent: ", current_captions)
             # print("gen_sent: ", gen_sent)
-
+            summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
+            summary_writer.add_summary(summary_bleu, step_count)
+            create_eval_json(mode="train")
             step_count += 1
 
         saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
         summary_writer.add_summary(summary, step_count)
+        # summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
+        # summary_writer.add_summary(summary_bleu, step_count)
+        # create_eval_json(mode="train")
+
         duration = time.time() - start_time
-        print('Epoch {:d} \t loss = {:.3f}, ({:.3f} sec/step)'.format(epoch, loss_value, duration))
+        print('Epoch {:d} \t loss = {:.3f}, mean_BLEU = {:.3f}, ({:.3f} sec/step)'.format(epoch, loss_value, bleu_score, duration))
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = FLAGS.GPU

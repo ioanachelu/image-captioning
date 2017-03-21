@@ -3,9 +3,9 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras import applications
 import pandas as pd
 import os
-import skimage
 from PIL import Image
 import cv2
+import flags
 import tensorflow as tf
 from keras.models import model_from_json
 FLAGS = tf.app.flags.FLAGS
