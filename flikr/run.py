@@ -39,7 +39,10 @@ def run():
     word_to_index, index_to_word, bias_init_vector = preprocess_captions(captions)
 
     np.save('data/index_to_word', index_to_word)
-    print(len(range(0, len(feats), FLAGS.batch_size)))
+    np.save('data/word_to_index', word_to_index)
+    summary_every = len(range(0, len(feats), FLAGS.batch_size))
+    checkpoint_every = summary_every
+    num_examples_per_epoch = checkpoint_every
 
     sess = tf.InteractiveSession()
     n_words = len(word_to_index)
@@ -56,14 +59,14 @@ def run():
 
     loss, image, sentence, mask, generated_sentence = network.build_model()
     global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False)
-    train_op = network.train(global_step)
+    train_op = network.train(global_step, num_examples_per_epoch)
     summary_writer, summaries = network.summary()
 
     saver = tf.train.Saver(max_to_keep=50)
 
-    restore_var = tf.global_variables()
+    # restore_var = tf.global_variables()
     if FLAGS.resume:
-        loader = tf.train.Saver(var_list=restore_var)
+        loader = tf.train.Saver()
         load_model(loader, sess)
         sess.run(tf.local_variables_initializer())
     else:
@@ -94,15 +97,16 @@ def run():
                 sentence: current_caption_matrix,
                 mask: current_mask_matrix,
                 })
-            print("target_sent: ", current_captions)
-            print("gen_sent: ", gen_sent)
-            if step_count % FLAGS.checkpoint_every == 0:
-                saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
-            if step_count % FLAGS.summary_every == 0:
-                summary_writer.add_summary(summary, step_count)
+
+            gen_sent = [index_to_word[caption_id] for caption_id in gen_sent if caption_id in index_to_word]
+
+            # print("target_sent: ", current_captions)
+            # print("gen_sent: ", gen_sent)
 
             step_count += 1
 
+        saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
+        summary_writer.add_summary(summary, step_count)
         duration = time.time() - start_time
         print('Epoch {:d} \t loss = {:.3f}, ({:.3f} sec/step)'.format(epoch, loss_value, duration))
 

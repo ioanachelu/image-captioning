@@ -21,15 +21,15 @@ def get_caption_data(mode="train"):
     return feats, captions
 
 
-def preprocess_captions(captions, word_count_threshold=30):
-    print('pre processing word counts and creating vocab based on word count threshold {}'.format(word_count_threshold,))
+def preprocess_captions(captions):
+    print('pre processing word counts and creating vocab based on word count threshold {}'.format(FLAGS.word_frequency_threshold))
     word_counts = {}
     nsents = 0
     for caption in captions:
         nsents += 1
         for w in caption.lower().split(' '):
             word_counts[w] = word_counts.get(w, 0) + 1
-    vocab = [w for w in word_counts if word_counts[w] >= word_count_threshold]
+    vocab = [w for w in word_counts if word_counts[w] >= FLAGS.word_frequency_threshold]
     print('filtered words from {} to {}'.format(len(word_counts), len(vocab)))
     index_to_word = {}
     index_to_word[0] = '.'

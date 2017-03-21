@@ -78,14 +78,13 @@ class ShowAndTell():
 
         self.loss = total_loss
         generated_words = tf.stack(generated_words, axis=1)
-        generated_words = tf.boolean_mask(generated_words, mask[:, 0])
-        return total_loss, image, sentence, mask, tf.stack(generated_words, axis=1)
+        generated_words = tf.boolean_mask(generated_words, tf.cast(mask[:, 1:], dtype=tf.bool))
+        return total_loss, image, sentence, mask, generated_words
 
-    def train(self, global_step):
+    def train(self, global_step, num_examples_per_epoch):
         all_trainable = [v for v in tf.trainable_variables() if 'beta' not in v.name and 'gamma' not in v.name]
         # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-        decay_steps = int(FLAGS.num_examples_per_epoch *
-                          FLAGS.num_epochs_per_decay)
+        decay_steps = int(FLAGS.num_epochs_per_decay)
 
         learning_rate = tf.train.exponential_decay(FLAGS.initial_learning_rate, global_step,
                                                    decay_steps, FLAGS.learning_rate_decay_factor, staircase=True)
@@ -98,7 +97,9 @@ class ShowAndTell():
                 tf.summary.histogram(weight.name + '_grad', grad)
                 tf.summary.histogram(weight.name, weight)
 
+            grads, grad_norms = tf.clip_by_global_norm(grads, FLAGS.gradient_clip_value)
             train_op = opt.apply_gradients(zip(grads, all_trainable))
+
 
         return train_op
 

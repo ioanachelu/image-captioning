@@ -42,8 +42,9 @@ tf.app.flags.DEFINE_float('momentum', 0.9, """Learning rate momentum""")
 tf.flags.DEFINE_integer("embedding_size", 256, """embedding_size""")
 tf.flags.DEFINE_integer("image_embedding_size", 4096, """embedding_network_size""")
 tf.flags.DEFINE_integer("num_lstm_units", 256, """num_lstm_units""")
-tf.app.flags.DEFINE_integer('num_examples_per_epoch', 1242, """Number of examples per epoch of training data""")
-tf.app.flags.DEFINE_integer('num_epochs_per_decay', 20,
+tf.app.flags.DEFINE_integer('word_frequency_threshold', 5, """word_frequency_threshold""")
+tf.app.flags.DEFINE_integer('gradient_clip_value', 5, """clip_gradient""")
+tf.app.flags.DEFINE_integer('num_epochs_per_decay', 1000,
                             """Number of epochs until the learning rate is decayed according to the schedule""")
 tf.app.flags.DEFINE_float('learning_rate_decay_factor', 0.5, """Learning rate power for decay""")
 tf.app.flags.DEFINE_float('moving_average_decay', 0.9, """Moving average decay for loss""")
