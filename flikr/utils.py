@@ -64,9 +64,19 @@ def preprocess_captions(captions):
 
     # create vocab
     # unk_id = len(common_words)
-    word_to_index = dict([(word, id) for (id, word) in enumerate([word_count[0] for word_count in common_words])])
-    index_to_word = dict([(id, word) for (id, word) in enumerate([word_count[0] for word_count in common_words])])
 
+    if not tf.gfile.Exists('data/word_to_index.npy') or not tf.gfile.Exists('data/index_to_word.npy'):
+        print("Recreating dictionaries from training captions")
+        word_to_index = dict([(word, id) for id, word in enumerate([word_count[0] for word_count in common_words])])
+        index_to_word = dict([(id, word) for id, word in enumerate([word_count[0] for word_count in common_words])])
+        np.save('data/index_to_word', index_to_word)
+        np.save('data/word_to_index', word_to_index)
+    else:
+        print("Loading dictionaries")
+        word_to_index = np.load('data/word_to_index.npy')[()]
+        index_to_word = np.load('data/index_to_word.npy')[()]
+
+    maxlen = np.max([len(c) for c in captions])
     # vocab = Vocabulary(vocab_dict, unk_id)
 
     # word_counts = {}
@@ -92,7 +102,7 @@ def preprocess_captions(captions):
     bias_init_vector /= np.sum(bias_init_vector)
     bias_init_vector = np.log(bias_init_vector)
     bias_init_vector -= np.max(bias_init_vector)
-    return word_to_index, index_to_word, bias_init_vector
+    return word_to_index, index_to_word, bias_init_vector, maxlen
 
 
 def load_model(saver, sess):
@@ -129,7 +139,7 @@ def create_eval_json(all_gen_sent, filenames_to_captions_shuffled, mode):
         filenames_captions_dict.setdefault(f, [])
         filenames_captions_dict[f].append(c)
 
-    for i in range(28000):
+    for i in range(len(all_gen_sent)):
         filename, caption = filenames_to_captions_shuffled[i]
         gen_sent = all_gen_sent[i]
         id_ = list(filenames_captions_dict.keys()).index(filename)

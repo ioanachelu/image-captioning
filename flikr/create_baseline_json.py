@@ -46,7 +46,10 @@ d = {"images": [{'license': elem.split(',')[0], "url": elem.split(',')[1], "file
                  "id": str(elem.split(',')[3]), "width": elem.split(',')[4], "date_captured": elem.split(',')[5],
                  "height": elem.split(',')[6]} for elem in ims],
      "annotations": [{'image_id': str(elem.split(',')[0]), "id": elem.split(',')[1], "caption": elem.split(',')[2]} for
-                     elem in anns]}
+                     elem in anns],
+     "type": "captions",
+     "info": {},
+     "licenses": []}
 
 # actually it is the test baseline
 json.dump(d, open(output_path + './flickr30k_base_baseline.json', 'w'))

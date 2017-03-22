@@ -84,7 +84,7 @@ class ShowAndTell():
     def train(self, global_step, num_examples_per_epoch):
         all_trainable = [v for v in tf.trainable_variables() if 'beta' not in v.name and 'gamma' not in v.name]
         # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-        decay_steps = int(FLAGS.num_epochs_per_decay)
+        decay_steps = int(num_examples_per_epoch * FLAGS.num_epochs_per_decay)
 
         learning_rate = tf.train.exponential_decay(FLAGS.initial_learning_rate, global_step,
                                                    decay_steps, FLAGS.learning_rate_decay_factor, staircase=True)
@@ -109,14 +109,18 @@ class ShowAndTell():
         return summary_writer, merged_summary
 
     def build_generator(self, maxlen):
+        word_to_index = np.load("data/word_to_index.npy")[()]
+        end_word_tensor = tf.expand_dims(tf.constant(word_to_index[FLAGS.end_word], dtype=tf.int64), 0)
         image = tf.placeholder(tf.float32, [1, self.image_embedding_size])
         image_emb = tf.matmul(image, self.encode_img_W) + self.encode_img_b
         generated_words = []
+        mask = []
         with tf.variable_scope("lstm") as lstm_scope:
             zero_state = self.lstm.zero_state(batch_size=1, dtype=tf.float32)
             _, state = self.lstm(image_emb, zero_state)
             with tf.device("/cpu:0"):
-                last_word = tf.nn.embedding_lookup(self.Wemb, [0]) + self.bemb
+
+                last_word = tf.nn.embedding_lookup(self.Wemb, [word_to_index[FLAGS.start_word]]) + self.bemb
 
             tf.get_variable_scope().reuse_variables()
 
@@ -128,6 +132,7 @@ class ShowAndTell():
                     last_word = tf.nn.embedding_lookup(self.Wemb, max_prob_word)
                 last_word += self.bemb
 
+                mask.append(tf.equal(max_prob_word, end_word_tensor))
                 generated_words.append(max_prob_word)
 
-        return image, generated_words
+        return image, generated_words, mask

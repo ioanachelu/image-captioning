@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from keras.preprocessing import sequence
 import time
-from utils import get_caption_data, preprocess_captions, load_model, compute_bleu_score_for_batch, create_eval_json
+from utils import get_caption_data, preprocess_captions, load_model, compute_bleu_score_for_batch, create_eval_json, tokenize
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -37,17 +37,17 @@ def run():
     captions = captions[index]
     filenames_to_captions = filenames_to_captions[index]
 
-    word_to_index, index_to_word, bias_init_vector = preprocess_captions(captions)
+    word_to_index, index_to_word, bias_init_vector, maxlen = preprocess_captions(captions)
 
-    np.save('data/index_to_word', index_to_word)
-    np.save('data/word_to_index', word_to_index)
+    # np.save('data/index_to_word', index_to_word)
+    # np.save('data/word_to_index', word_to_index)
     # summary_every = len(range(0, len(feats), FLAGS.batch_size))
     # checkpoint_every = summary_every
     num_examples_per_epoch = len(range(0, len(feats), FLAGS.batch_size))
 
     sess = tf.InteractiveSession()
     n_words = len(word_to_index)
-    maxlen = np.max([len(x.split(' ')) for x in captions])
+    # maxlen = np.max([len(x.split(' ')) for x in captions])
 
     network = ShowAndTell(
         image_embedding_size=FLAGS.image_embedding_size,
@@ -71,20 +71,26 @@ def run():
         loader = tf.train.Saver()
         load_model(loader, sess)
         sess.run(tf.local_variables_initializer())
+        step_count = sess.run(global_step)
+        start_step = step_count // num_examples_per_epoch + 1
+
+
     else:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
+        start_step = 0
+        step_count = 0
 
     increment_global_step = global_step.assign_add(1)
-    step_count = 0
-    all_gen_sents = []
-    for epoch in range(FLAGS.num_epochs):
+
+    for epoch in range(start_step, FLAGS.num_epochs):
         start_time = time.time()
         all_gen_sents = []
         for start, end in zip(range(0, len(feats), FLAGS.batch_size), range(FLAGS.batch_size, len(feats), FLAGS.batch_size)):
             current_feats = feats[start:end]
             current_captions = captions[start:end]
-            current_caption_ind = [[word_to_index[word] for word in cap.lower().split(' ')[:-1] if word in word_to_index] for cap in current_captions]
+            current_captions = tokenize(current_captions)
+            current_caption_ind = [[word_to_index[word] for word in cap if word in word_to_index] for cap in current_captions]
 
             current_caption_matrix = sequence.pad_sequences(current_caption_ind, padding='post', maxlen=maxlen + 1)
             current_caption_matrix = np.hstack(

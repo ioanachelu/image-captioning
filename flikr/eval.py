@@ -38,19 +38,20 @@ def eval():
         n_lstm_steps=maxlen,
         n_words=n_words)
 
-    image_embedding_placeholder, generated_words = caption_generator.build_generator(maxlen=maxlen)
+    image_embedding_placeholder, generated_words, mask = caption_generator.build_generator(maxlen=maxlen)
     all_trainable = [v for v in tf.global_variables() if 'block' not in v.name and 'fc1' not in v.name and 'fc2' not in v.name and 'predictions' not in v.name]
     # restore_var = tf.global_variables()
     loader = tf.train.Saver(var_list=all_trainable)
     load_model(loader, sess)
 
-    generated_word_index = sess.run(generated_words, feed_dict={image_embedding_placeholder: feats})
+    generated_word_index, mask_pred = sess.run([generated_words, mask], feed_dict={image_embedding_placeholder: feats})
     generated_word_index = np.hstack(generated_word_index)
+    mask_pred = np.hstack(mask_pred)
 
-    generated_words = [index_to_word[x] for x in generated_word_index]
-    punctuation = np.argmax(np.array(generated_words) == '.') + 1
+    generated_words = [index_to_word[x] for i, x in enumerate(generated_word_index) if not mask_pred[i]]
+    # punctuation = np.argmax(np.array(generated_words) == '.') + 1
 
-    generated_words = generated_words[:punctuation]
+    # generated_words = generated_words[:punctuation]
     generated_sentence = ' '.join(generated_words)
     print(generated_sentence)
 

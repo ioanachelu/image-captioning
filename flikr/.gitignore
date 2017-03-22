@@ -11,3 +11,4 @@ acoustic-guitar-player.jpg
 *.tar
 *.npy
 *.tar.1
+.idea/
