@@ -123,7 +123,7 @@ def run():
         print("Reference:")
         print([' '.join(str(w) for w in c) for c in current_captions])
         print("Hypothesis:")
-        print(gen_sent_batch[0])
+        print(' '.join(str(w) for w in gen_sent_batch[0]))
         print("------------------------")
         bleu_score = compute_bleu_score_for_batch(gen_sent_batch, start, end, filenames_to_captions)
         # print("target_sent: ", current_captions)
