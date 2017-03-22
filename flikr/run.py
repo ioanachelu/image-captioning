@@ -111,13 +111,15 @@ def run():
             gen_sent_batch = [[index_to_word[caption_id] for caption_id in gen_sent if caption_id in index_to_word] for gen_sent in gen_sent_batch]
             caption_sizes = np.sum(current_mask_matrix, axis=1).tolist()
             gen_sent_batch = [gen_sent[:int(s)] for gen_sent, s in zip(gen_sent_batch, caption_sizes)]
-            print(gen_sent_batch[0])
-            all_gen_sents.extend(gen_sent_batch)
+
+            # all_gen_sents.extend(gen_sent_batch)
 
             step_count += 1
 
         saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
         summary_writer.add_summary(summary, step_count)
+        # print(all_gen_sents[0][0])
+        print(gen_sent_batch[0])
         bleu_score = compute_bleu_score_for_batch(gen_sent_batch, start, end, filenames_to_captions)
         # print("target_sent: ", current_captions)
         # print("gen_sent: ", gen_sent)

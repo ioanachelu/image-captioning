@@ -115,6 +115,7 @@ def load_model(saver, sess):
 def get_all_captions_for_filename(filename, filenames_to_captions):
     # filename = filenames_to_captions[index][0]
     reference_captions = [c for f, c in filenames_to_captions if f == filename]
+    reference_captions = [' '.join(tokenize(c)) for c in reference_captions]
 
     return reference_captions
 
