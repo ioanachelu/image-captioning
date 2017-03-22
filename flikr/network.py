@@ -45,7 +45,7 @@ class ShowAndTell():
             lstm_scope.reuse_variables()
 
             for i in range(self.n_lstm_steps - 1):
-                print(i)
+                # print(i)
                 with tf.device("/cpu:0"):
                     current_emb = tf.nn.embedding_lookup(self.Wemb, sentence[:, i]) + self.bemb
 
