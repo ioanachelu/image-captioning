@@ -41,9 +41,9 @@ def run():
 
     np.save('data/index_to_word', index_to_word)
     np.save('data/word_to_index', word_to_index)
-    summary_every = len(range(0, len(feats), FLAGS.batch_size))
-    checkpoint_every = summary_every
-    num_examples_per_epoch = checkpoint_every
+    # summary_every = len(range(0, len(feats), FLAGS.batch_size))
+    # checkpoint_every = summary_every
+    num_examples_per_epoch = len(range(0, len(feats), FLAGS.batch_size))
 
     sess = tf.InteractiveSession()
     n_words = len(word_to_index)
@@ -77,8 +77,10 @@ def run():
 
     increment_global_step = global_step.assign_add(1)
     step_count = 0
+    all_gen_sents = []
     for epoch in range(FLAGS.num_epochs):
         start_time = time.time()
+        all_gen_sents = []
         for start, end in zip(range(0, len(feats), FLAGS.batch_size), range(FLAGS.batch_size, len(feats), FLAGS.batch_size)):
             current_feats = feats[start:end]
             current_captions = captions[start:end]
@@ -94,23 +96,29 @@ def run():
             for ind, row in enumerate(current_mask_matrix):
                 row[:nonzeros[ind]] = 1
 
-            _, loss_value, summary, _, gen_sent = sess.run([train_op, loss, summaries, increment_global_step, generated_sentence], feed_dict={
+            _, loss_value, summary, _, gen_sent_batch = sess.run([train_op, loss, summaries, increment_global_step, generated_sentence], feed_dict={
                 image: current_feats,
                 sentence: current_caption_matrix,
                 mask: current_mask_matrix,
                 })
 
-            gen_sent = [index_to_word[caption_id] for caption_id in gen_sent if caption_id in index_to_word]
-            bleu_score = compute_bleu_score_for_batch(gen_sent, start, end, filenames_to_captions)
-            # print("target_sent: ", current_captions)
-            # print("gen_sent: ", gen_sent)
-            summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
-            summary_writer.add_summary(summary_bleu, step_count)
-            create_eval_json(mode="train")
+            gen_sent_batch = [[index_to_word[caption_id] for caption_id in gen_sent if caption_id in index_to_word] for gen_sent in gen_sent_batch]
+            caption_sizes = np.sum(current_mask_matrix, axis=1).tolist()
+            gen_sent_batch = [gen_sent[:int(s)] for gen_sent, s in zip(gen_sent_batch, caption_sizes)]
+
+            all_gen_sents.extend(gen_sent_batch)
+
             step_count += 1
 
         saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
         summary_writer.add_summary(summary, step_count)
+        bleu_score = compute_bleu_score_for_batch(gen_sent_batch, start, end, filenames_to_captions)
+        # print("target_sent: ", current_captions)
+        # print("gen_sent: ", gen_sent)
+        print("bleu_score ", bleu_score)
+        summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
+        summary_writer.add_summary(summary_bleu, step_count)
+        create_eval_json(all_gen_sents, filenames_to_captions, mode="train")
         # summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
         # summary_writer.add_summary(summary_bleu, step_count)
         # create_eval_json(mode="train")

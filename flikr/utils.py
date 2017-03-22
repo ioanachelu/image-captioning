@@ -7,6 +7,7 @@ import pickle
 import nltk
 import json
 import codecs
+from collections import Counter
 from random import randint
 FLAGS = tf.app.flags.FLAGS
 
@@ -28,28 +29,66 @@ def get_caption_data(mode="train"):
     return feats, captions, filenames_to_captions
 
 
-def preprocess_captions(captions):
-    print('pre processing word counts and creating vocab based on word count threshold {}'.format(FLAGS.word_frequency_threshold))
-    word_counts = {}
-    nsents = 0
-    for caption in captions:
-        nsents += 1
-        for w in caption.lower().split(' '):
-            word_counts[w] = word_counts.get(w, 0) + 1
-    vocab = [w for w in word_counts if word_counts[w] >= FLAGS.word_frequency_threshold]
-    print('filtered words from {} to {}'.format(len(word_counts), len(vocab)))
-    index_to_word = {}
-    index_to_word[0] = '.'
-    word_to_index = {}
-    word_to_index['#START#'] = 0
-    index = 1
-    for w in vocab:
-        word_to_index[w] = index
-        index_to_word[index] = w
-        index += 1
+def tokenize(unprocessed_captions):
+    processed_captions = []
+    for unprocessed_caption in unprocessed_captions:
+        processed_caption = [FLAGS.start_word]
+        processed_caption.extend(nltk.tokenize.word_tokenize(unprocessed_caption.lower()))
+        processed_caption.append(FLAGS.end_word)
+        processed_captions.append(processed_caption)
 
-    word_counts['.'] = nsents
-    bias_init_vector = np.array([1.0 * word_counts[index_to_word[i]] for i in index_to_word])
+    return processed_captions
+
+
+def preprocess_captions(captions):
+    print('pre processing word counts and creating vocab based on word count threshold {}'.format(FLAGS.min_word_count))
+
+    captions = tokenize(captions)
+
+    counter = Counter()
+    for caption in captions:
+        counter.update(caption)
+
+    print("Nb of words {}".format(len(counter)))
+
+    # take only common words
+
+    common_words = [word for word in counter.items() if word[1] > FLAGS.min_word_count]
+
+    print("Nb of common words {}".format(len(common_words)))
+
+    # with open(FLAGS.word_counts_output_file, "w") as f:
+    #     for word, count in common_words:
+    #         f.write("{} {}\n".format(word, count))
+    # print("Finished writing word count vocabulary file")
+
+    # create vocab
+    # unk_id = len(common_words)
+    word_to_index = dict([(word, id) for (id, word) in enumerate([word_count[0] for word_count in common_words])])
+    index_to_word = dict([(id, word) for (id, word) in enumerate([word_count[0] for word_count in common_words])])
+
+    # vocab = Vocabulary(vocab_dict, unk_id)
+
+    # word_counts = {}
+    # nsents = 0
+    # for caption in captions:
+    #     nsents += 1
+    #     for w in caption.lower().split(' '):
+    #         word_counts[w] = word_counts.get(w, 0) + 1
+    # vocab = [w for w in word_counts if word_counts[w] >= FLAGS.word_frequency_threshold]
+    # print('filtered words from {} to {}'.format(len(word_counts), len(vocab)))
+    # index_to_word = {}
+    # index_to_word[0] = '.'
+    # word_to_index = {}
+    # word_to_index['#START#'] = 0
+    # index = 1
+    # for w in vocab:
+    #     word_to_index[w] = index
+    #     index_to_word[index] = w
+    #     index += 1
+    #
+    # word_counts['.'] = nsents
+    bias_init_vector = np.array([1.0 * counter[index_to_word[i]] for i in index_to_word])
     bias_init_vector /= np.sum(bias_init_vector)
     bias_init_vector = np.log(bias_init_vector)
     bias_init_vector -= np.max(bias_init_vector)
@@ -73,6 +112,7 @@ def compute_bleu_score_for_batch(gen_sent, start, end, filenames_to_captions):
     batch_filenames_for_captions = filenames_to_captions[start:end]
     batch_reference_captions = [get_all_captions_for_filename(f, filenames_to_captions) for f, _ in batch_filenames_for_captions]
 
+    gen_sent = [[w for w in g if w != FLAGS.start_word and w != FLAGS.end_word] for g in gen_sent]
     references_hypothesis_assoc = list(zip(batch_reference_captions, gen_sent))
     cc = nltk.translate.bleu_score.SmoothingFunction()
     bleu_scores = [nltk.translate.bleu_score.sentence_bleu(references, hypothesis, smoothing_function=cc.method3) for references, hypothesis in references_hypothesis_assoc]
@@ -81,46 +121,21 @@ def compute_bleu_score_for_batch(gen_sent, start, end, filenames_to_captions):
     return bleu_score_batch
 
 
-def create_eval_json(mode):
+def create_eval_json(all_gen_sent, filenames_to_captions_shuffled, mode):
     feats, captions, filenames_to_captions = get_caption_data(mode=mode)
-
-    # lets give fixed values to mandatory fields
-    license_ = 3
-    url_ = 'asdasdsda.com'
-    width_ = 640
-    height_ = 480
-    date_captured = 14
-
-    out_json_tr = []
-    captions_tr = []
-    ims = []
     anns = []
-    # captions_en = []
-    offset = 0
-    found = 0
-    id_ = 0
-    index_ = 0
-
     filenames_captions_dict = {}
     for f, c in filenames_to_captions:
         filenames_captions_dict.setdefault(f, [])
         filenames_captions_dict[f].append(c)
 
-    for j, f in enumerate(filenames_captions_dict.keys()):
+    for i in range(28000):
+        filename, caption = filenames_to_captions_shuffled[i]
+        gen_sent = all_gen_sent[i]
+        id_ = list(filenames_captions_dict.keys()).index(filename)
+        anns_elem = str(id_) + ',' + str(gen_sent)
+        anns.append(anns_elem)
 
-        ims_elem = str(license_) + ',' + str(url_) + ',' + str(f) + ',' + str(j) + ',' + str(
-            width_) + ',' + str(date_captured) + ',' + str(height_)
-        ims.append(ims_elem)
-        for k in range(5):
-            anns_elem = str(j) + ',' + str(randint(4000, 9000)) + ',' + str(filenames_captions_dict[f][k])
-            anns.append(anns_elem)
+    d = [{'image_id': elem.split(',')[0], "caption": elem.split(',')[1]} for elem in anns]
 
-    d = {"images": [{'license': elem.split(',')[0], "url": elem.split(',')[1], "file_name": elem.split(',')[2],
-                     "id": str(elem.split(',')[3]), "width": elem.split(',')[4], "date_captured": elem.split(',')[5],
-                     "height": elem.split(',')[6]} for elem in ims],
-         "annotations": [{'image_id': str(elem.split(',')[0]), "id": elem.split(',')[1], "caption": elem.split(',')[2]}
-                         for
-                         elem in anns]}
-
-    # actually it is the test baseline
-    json.dump(d, open('./results/flickr30k_val_baseline.json', 'w'))
+    json.dump(d, open('./results/flicker_train_res.json', 'w'))

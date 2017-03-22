@@ -78,7 +78,7 @@ class ShowAndTell():
 
         self.loss = total_loss
         generated_words = tf.stack(generated_words, axis=1)
-        generated_words = tf.boolean_mask(generated_words, tf.cast(mask[:, 1:], dtype=tf.bool))
+        # generated_words = tf.boolean_mask(generated_words, tf.cast(mask[:, 1:], dtype=tf.bool))
         return total_loss, image, sentence, mask, generated_words
 
     def train(self, global_step, num_examples_per_epoch):

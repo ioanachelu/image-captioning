@@ -1,12 +1,12 @@
 import tensorflow as tf
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('checkpoint_every', 1242,
-                            """Checkpoint interval""")
-tf.app.flags.DEFINE_integer('summary_every', 1242,
-                            """Summary interval""")
-tf.app.flags.DEFINE_integer('test_summary_every', 1242,
-                            """Summary interval""")
+# tf.app.flags.DEFINE_integer('checkpoint_every', 1242,
+#                             """Checkpoint interval""")
+# tf.app.flags.DEFINE_integer('summary_every', 1242,
+#                             """Summary interval""")
+# tf.app.flags.DEFINE_integer('test_summary_every', 1242,
+#                             """Summary interval""")
 tf.app.flags.DEFINE_string('GPU', "0",
                            """The GPU device to run on""")
 tf.app.flags.DEFINE_integer('batch_size', 128,
@@ -42,7 +42,7 @@ tf.app.flags.DEFINE_float('momentum', 0.9, """Learning rate momentum""")
 tf.flags.DEFINE_integer("embedding_size", 256, """embedding_size""")
 tf.flags.DEFINE_integer("image_embedding_size", 4096, """embedding_network_size""")
 tf.flags.DEFINE_integer("num_lstm_units", 256, """num_lstm_units""")
-tf.app.flags.DEFINE_integer('word_frequency_threshold', 5, """word_frequency_threshold""")
+tf.app.flags.DEFINE_integer('min_word_count', 5, """min_word_count""")
 tf.app.flags.DEFINE_integer('gradient_clip_value', 5, """clip_gradient""")
 tf.app.flags.DEFINE_integer('num_epochs_per_decay', 1000,
                             """Number of epochs until the learning rate is decayed according to the schedule""")
@@ -50,3 +50,7 @@ tf.app.flags.DEFINE_float('learning_rate_decay_factor', 0.5, """Learning rate po
 tf.app.flags.DEFINE_float('moving_average_decay', 0.9, """Moving average decay for loss""")
 tf.app.flags.DEFINE_string('test_image_path', './acoustic-guitar-player.jpg',
                            """File where the test_image_path is""")
+tf.flags.DEFINE_string("start_word", "<S>",
+                       "Special word added to the beginning of each sentence.")
+tf.flags.DEFINE_string("end_word", "</S>",
+                       "Special word added to the end of each sentence.")

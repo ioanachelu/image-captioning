@@ -7,7 +7,7 @@ TOTAL_CAPTIONS_FOR_AN_IMAGE = 5  # total captions for an image in the dataset
 
 output_path = './data/'
 
-feats, captions, filenames_to_captions = get_caption_data(mode="test")
+feats, captions, filenames_to_captions = get_caption_data(mode="train")
 
 
 # lets give fixed values to mandatory fields
@@ -21,7 +21,6 @@ out_json_tr = []
 captions_tr = []
 ims = []
 anns = []
-# captions_en = []
 offset = 0
 found = 0
 id_ = 0
