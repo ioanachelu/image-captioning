@@ -40,6 +40,14 @@ def tokenize(unprocessed_captions):
 
     return processed_captions
 
+def preprocess_for_test(unprocessed_captions):
+    processed_captions = []
+    for unprocessed_caption in unprocessed_captions:
+        processed_caption = (' '.join([w for w in nltk.tokenize.word_tokenize(unprocessed_caption.lower().strip()) if w.isalpha()]))
+        processed_captions.append(processed_caption)
+
+    return processed_captions
+
 
 def preprocess_captions(captions):
     print('pre processing word counts and creating vocab based on word count threshold {}'.format(FLAGS.min_word_count))
@@ -115,7 +123,8 @@ def load_model(saver, sess):
 def get_all_captions_for_filename(filename, filenames_to_captions):
     # filename = filenames_to_captions[index][0]
     reference_captions = [c for f, c in filenames_to_captions if f == filename]
-    reference_captions = [' '.join(str(w) for w in tokenize(c)) for c in reference_captions]
+    # reference_captions = [' '.join(str(w) for w in tokenize(c)) for c in reference_captions]
+    reference_captions = preprocess_for_test(reference_captions)
 
     return reference_captions
 
