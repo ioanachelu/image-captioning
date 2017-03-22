@@ -54,7 +54,7 @@ def run():
         num_lstm_units=FLAGS.num_lstm_units,
         embedding_size=FLAGS.embedding_size,
         batch_size=FLAGS.batch_size,
-        n_lstm_steps=maxlen + 2,
+        n_lstm_steps=maxlen,
         n_words=n_words,
         bias_init_vector=bias_init_vector)
 
@@ -92,12 +92,12 @@ def run():
             current_captions = tokenize(current_captions)
             current_caption_ind = [[word_to_index[word] for word in cap if word in word_to_index] for cap in current_captions]
 
-            current_caption_matrix = sequence.pad_sequences(current_caption_ind, padding='post', maxlen=maxlen + 1)
-            current_caption_matrix = np.hstack(
-                [np.full((len(current_caption_matrix), 1), 0), current_caption_matrix]).astype(int)
+            current_caption_matrix = sequence.pad_sequences(current_caption_ind, padding='post', maxlen=maxlen)
+            # current_caption_matrix = np.hstack(
+            #     [np.full((len(current_caption_matrix), 1), 0), current_caption_matrix]).astype(int)
 
             current_mask_matrix = np.zeros((current_caption_matrix.shape[0], current_caption_matrix.shape[1]))
-            nonzeros = np.array([(x != 0).sum() + 2 for x in current_caption_matrix])
+            nonzeros = np.array([(x != 0).sum() for x in current_caption_matrix])
 
             for ind, row in enumerate(current_mask_matrix):
                 row[:nonzeros[ind]] = 1
@@ -111,7 +111,7 @@ def run():
             gen_sent_batch = [[index_to_word[caption_id] for caption_id in gen_sent if caption_id in index_to_word] for gen_sent in gen_sent_batch]
             caption_sizes = np.sum(current_mask_matrix, axis=1).tolist()
             gen_sent_batch = [gen_sent[:int(s)] for gen_sent, s in zip(gen_sent_batch, caption_sizes)]
-
+            print(gen_sent_batch[0])
             all_gen_sents.extend(gen_sent_batch)
 
             step_count += 1
@@ -124,7 +124,7 @@ def run():
         print("bleu_score ", bleu_score)
         summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
         summary_writer.add_summary(summary_bleu, step_count)
-        create_eval_json(all_gen_sents, filenames_to_captions, mode="train")
+        # create_eval_json(all_gen_sents, filenames_to_captions, mode="train")
         # summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
         # summary_writer.add_summary(summary_bleu, step_count)
         # create_eval_json(mode="train")

@@ -33,7 +33,8 @@ def tokenize(unprocessed_captions):
     processed_captions = []
     for unprocessed_caption in unprocessed_captions:
         processed_caption = [FLAGS.start_word]
-        processed_caption.extend(nltk.tokenize.word_tokenize(unprocessed_caption.lower()))
+        # processed_caption.extend(nltk.tokenize.word_tokenize(unprocessed_caption.lower()))
+        processed_caption.extend([w for w in nltk.tokenize.word_tokenize(unprocessed_caption.lower().strip()) if w.isalpha()])
         processed_caption.append(FLAGS.end_word)
         processed_captions.append(processed_caption)
 

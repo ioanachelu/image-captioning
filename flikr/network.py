@@ -37,7 +37,7 @@ class ShowAndTell():
         image_emb = tf.matmul(image, self.encode_img_W) + self.encode_img_b  # (batch_size, dim_hidden)
 
         ema = tf.train.ExponentialMovingAverage(FLAGS.moving_average_decay, name='loss_avg')
-        generated_words = []
+        generated_words = [tf.cast(sentence[:, 0], dtype=tf.int64)]
         with tf.variable_scope("lstm") as lstm_scope:
             zero_state = self.lstm.zero_state(batch_size=self.batch_size, dtype=tf.float32)
             _, state = self.lstm(image_emb, zero_state)
@@ -45,6 +45,7 @@ class ShowAndTell():
             lstm_scope.reuse_variables()
 
             for i in range(self.n_lstm_steps - 1):
+                print(i)
                 with tf.device("/cpu:0"):
                     current_emb = tf.nn.embedding_lookup(self.Wemb, sentence[:, i]) + self.bemb
 
