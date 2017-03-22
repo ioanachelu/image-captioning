@@ -1,8 +1,8 @@
-import tensorflow as tf
-import image_embedding
-import flags
-import numpy as np
 import image_reader
+import numpy as np
+import tensorflow as tf
+
+from inception import image_embedding
 
 IMG_MEAN = np.array((98, 97, 101), dtype=np.float32)
 
@@ -170,8 +170,8 @@ class ImageCaptioningModel():
 
             queue_capacity = (2 * self.num_preprocess_threads * FLAGS.batch_size)
             images, input_seqs, target_seqs, input_mask = image_reader.batch_with_dynamic_pad(images_and_captions,
-                                                                                      batch_size=FLAGS.batch_size,
-                                                                                      queue_capacity=queue_capacity)
+                                                                                              batch_size=FLAGS.batch_size,
+                                                                                              queue_capacity=queue_capacity)
         else:
             image_feed = tf.placeholder(dtype=tf.string, shape=[], name="image_feed")
             input_feed = tf.placeholder(dtype=tf.int64,

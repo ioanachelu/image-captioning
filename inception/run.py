@@ -1,12 +1,10 @@
-import threading
-import multiprocessing
+import os
+
 import tensorflow as tf
-from tensorflow.python import debug as tf_debug
-import flags
-import os
-from preprocessing import Preprocesser
 from model import ImageCaptioningModel
-import os
+
+from inception.preprocessing import Preprocesser
+
 FLAGS = tf.app.flags.FLAGS
 
 

@@ -6,6 +6,7 @@ import os
 FLAGS = tf.app.flags.FLAGS
 IMG_MEAN = np.array((98, 97, 101), dtype=np.float32)
 
+
 def prefetch_input_data(reader,
                         is_training,
                         batch_size,

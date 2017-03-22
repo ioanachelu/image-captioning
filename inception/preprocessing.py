@@ -1,24 +1,12 @@
 import tensorflow as tf
-import flags
-import os
-import numpy as np
 
 FLAGS = tf.app.flags.FLAGS
-from PIL import Image, ImageOps
-import multiprocessing
-import concurrent.futures
-import sys
 from collections import Counter
 import json
 import os
-import threading
-import sys
 import nltk.tokenize
 import numpy as np
-import random
 import pickle
-from datetime import datetime
-from image_decoder import ImageDecoder
 
 IMG_MEAN = np.array((98, 97, 101), dtype=np.float32)
 
