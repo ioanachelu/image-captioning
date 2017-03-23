@@ -7,8 +7,7 @@ import numpy as np
 import pandas as pd
 from keras.preprocessing import sequence
 import time
-from utils import get_caption_data, preprocess_captions, load_model, compute_bleu_score_for_batch, create_eval_json, \
-    tokenize, compute_bleu_score_for_whole_dataset
+from utils import get_caption_data, preprocess_captions, load_model, compute_bleu_score_for_batch, tokenize, compute_bleu_score_for_whole_dataset
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -60,22 +59,20 @@ def run():
             row[:nonzeros[ind]] = 1
 
         gen_sent_batch = sess.run(
-            [train_op, loss, summaries, increment_global_step, generated_sentence], feed_dict={
+            generated_sentence, feed_dict={
                 image: current_feats,
                 sentence: current_caption_matrix,
                 mask: current_mask_matrix,
             })
-
         gen_sent_batch = [[index_to_word[caption_id] for caption_id in gen_sent if caption_id in index_to_word] for
-                          gen_sent in gen_sent_batch]
+                          gen_sent in list(gen_sent_batch)]
         caption_sizes = np.sum(current_mask_matrix, axis=1).tolist()
         gen_sent_batch = [gen_sent[:int(s)] for gen_sent, s in zip(gen_sent_batch, caption_sizes)]
-
         all_gen_sents.extend(gen_sent_batch)
 
     bleu_score = compute_bleu_score_for_whole_dataset(all_gen_sents, filenames_to_captions)
     print("bleu_score ", bleu_score)
 
-    if __name__ == '__main__':
-        os.environ["CUDA_VISIBLE_DEVICES"] = FLAGS.GPU
-        run()
+if __name__ == '__main__':
+    os.environ["CUDA_VISIBLE_DEVICES"] = FLAGS.GPU
+    run()
