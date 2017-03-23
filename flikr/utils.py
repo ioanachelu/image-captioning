@@ -17,10 +17,10 @@ def get_caption_data(mode="train"):
         feats = np.load("./data/train_feats.npy")
         captions = np.load("./data/train_captions.npy")
         filenames_to_captions = np.load("./data/train_filename_caption_association.npy")
-    elif mode == "val":
-        feats = np.load("./data/val_feats.npy")
-        captions = np.load("./data/val_captions.npy")
-        filenames_to_captions = np.load("./data/val_filename_caption_association.npy")
+    # elif mode == "val":
+    #     feats = np.load("./data/val_feats.npy")
+    #     captions = np.load("./data/val_captions.npy")
+    #     filenames_to_captions = np.load("./data/val_filename_caption_association.npy")
     else:
         feats = np.load("data/test_feats.npy")
         captions = np.load("data/test_captions.npy")
@@ -148,6 +148,7 @@ def compute_bleu_score_for_whole_dataset(gen_sent, filenames_to_captions):
                           filenames_to_captions]
 
     gen_sent = [[w for w in g if w != FLAGS.start_word and w != FLAGS.end_word] for g in gen_sent]
+    gen_sent = [' '.join(g) for g in gen_sent]
     references_hypothesis_assoc = list(zip(reference_captions, gen_sent))
     cc = nltk.translate.bleu_score.SmoothingFunction()
     bleu_scores = [nltk.translate.bleu_score.sentence_bleu(references, hypothesis, smoothing_function=cc.method3) for
@@ -157,21 +158,25 @@ def compute_bleu_score_for_whole_dataset(gen_sent, filenames_to_captions):
     return bleu_score
 
 
-def create_eval_json(all_gen_sent, filenames_to_captions_shuffled, mode):
-    feats, captions, filenames_to_captions = get_caption_data(mode=mode)
+def create_eval_json(all_gen_sents, filenames_to_captions):
+    all_gen_sents = [[w for w in g if w != FLAGS.start_word and w != FLAGS.end_word] for g in all_gen_sents]
+    all_gen_sents = [' '.join(g) for g in all_gen_sents]
     anns = []
     filenames_captions_dict = {}
     for f, c in filenames_to_captions:
         filenames_captions_dict.setdefault(f, [])
         filenames_captions_dict[f].append(c)
 
-    for i in range(len(all_gen_sent)):
-        filename, caption = filenames_to_captions_shuffled[i]
-        gen_sent = all_gen_sent[i]
+    for f in filenames_captions_dict.keys():
+        filenames_captions_dict[f] = preprocess_for_test(filenames_captions_dict[f])
+
+    for i in range(len(all_gen_sents)):
+        filename, caption = filenames_to_captions[i]
+        gen_sent = all_gen_sents[i]
         id_ = list(filenames_captions_dict.keys()).index(filename)
         anns_elem = str(id_) + ',' + str(gen_sent)
         anns.append(anns_elem)
 
     d = [{'image_id': elem.split(',')[0], "caption": elem.split(',')[1]} for elem in anns]
 
-    json.dump(d, open('./results/flicker_train_res.json', 'w'))
+    json.dump(d, open('./results/flicker_' + FLAGS.validate_on + '_res.json', 'w'))

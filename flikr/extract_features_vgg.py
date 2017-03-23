@@ -11,12 +11,14 @@ from keras.models import model_from_json
 FLAGS = tf.app.flags.FLAGS
 
 batch_size = 16
-img_width, img_height = 224, 224
+img_width, img_height = 299, 299
 
 
 def get_or_build_model():
     # if new or not os.path.exists(FLAGS.model_path):
-    model = applications.VGG16(include_top=True, weights='imagenet')
+    # Pre-Trained CNN Model using imagenet dataset for pre-trained weights
+    model = applications.Xception(input_shape=(img_width, img_height, 3), weights='imagenet', include_top=True)
+
     model.layers.pop()
     model.outputs = [model.layers[-1].output]
     model.layers[-1].outbound_nodes = []
@@ -45,7 +47,7 @@ def extract_features_from_image(image_batch):
 
 
 def preprocess_images(model, image_list, img_width, img_height, batch_size):
-    all_feats = np.zeros([len(image_list)] + [4096])
+    all_feats = np.zeros([len(image_list)] + [2048])
     iter_until = len(image_list) + batch_size
 
     for start, end in zip(range(0, iter_until, batch_size),
@@ -59,7 +61,7 @@ def preprocess_images(model, image_list, img_width, img_height, batch_size):
     return all_feats
 
 
-def crop_image(x, target_height=227, target_width=227, as_float=True):
+def crop_image(x, target_height=224, target_width=224, as_float=True):
     image = Image.open(x)
     if as_float:
         image = np.asarray(image).astype(np.float32)
@@ -83,7 +85,7 @@ def crop_image(x, target_height=227, target_width=227, as_float=True):
         cropping_length = int((resized_image.shape[0] - target_width) / 2)
         resized_image = resized_image[cropping_length:resized_image.shape[0] - cropping_length,:]
 
-    return cv2.resize(resized_image, (target_height, target_width))
+    return cv2.resize(resized_image, (target_height, target_width)) * 1. / 255
 
 
 def save_bottlebeck_features():

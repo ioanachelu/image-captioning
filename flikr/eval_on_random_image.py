@@ -6,10 +6,12 @@ import os
 import numpy as np
 import pandas as pd
 from keras.preprocessing import sequence
-from utils import preprocess_captions, get_caption_data, load_model, tokenize, preprocess_for_test
+from utils import preprocess_captions, get_caption_data, load_model, tokenize, preprocess_for_test, get_all_captions_for_filename
 import time
 from extract_features_vgg import crop_image, extract_features_from_image
 import nltk
+import random
+from PIL import Image
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -24,10 +26,14 @@ def read_image(path):
 
 def eval():
     feats, captions, filenames_to_captions = get_caption_data(mode="test")
-    index = 0
+    index = random.randint(0, 1000)
     image_feats = feats[index]
 
-    image_captions = captions[index]
+    image = Image.open(filenames_to_captions[index][0])
+    image.show()
+
+    image_captions = get_all_captions_for_filename(filenames_to_captions[index][0], filenames_to_captions)
+    # image_captions = captions[index]
     index_to_word = np.load("data/index_to_word.npy").tolist()
     n_words = len(index_to_word)
     maxlen = np.max([len(c) for c in tokenize(image_captions)])
@@ -49,19 +55,21 @@ def eval():
     load_model(loader, sess)
     sess.run(tf.local_variables_initializer())
 
+    image_feats = np.expand_dims(image_feats, 0)
+
     generated_word_index, mask_pred = sess.run([generated_words, mask], feed_dict={image_embedding_placeholder: image_feats})
     generated_word_index = np.hstack(generated_word_index)
     mask_pred = np.hstack(mask_pred)
 
     generated_words = [index_to_word[x] for i, x in enumerate(generated_word_index) if not mask_pred[i]]
-    generated_words = [[w for w in g if w != FLAGS.start_word and w != FLAGS.end_word] for g in generated_words]
+    generated_words = [w for w in generated_words if w != FLAGS.start_word and w != FLAGS.end_word]
 
     generated_sentence = ' '.join(generated_words)
     reference_captions = preprocess_for_test(image_captions)
     print("------------------------")
     print("References:")
     for c in reference_captions:
-        print(' '.join(str(w) for w in c))
+        print(c)
     print("Hypothesis:")
     print(generated_sentence)
     print("------------------------")

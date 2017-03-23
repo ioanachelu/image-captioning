@@ -1,13 +1,13 @@
 import json
 import codecs
 from random import randint
-from utils import get_caption_data
+from utils import get_caption_data, preprocess_for_test
 
 TOTAL_CAPTIONS_FOR_AN_IMAGE = 5  # total captions for an image in the dataset
 
 output_path = './data/'
 
-feats, captions, filenames_to_captions = get_caption_data(mode="train")
+feats, captions, filenames_to_captions = get_caption_data(mode="test")
 
 
 # lets give fixed values to mandatory fields
@@ -30,6 +30,9 @@ filenames_captions_dict = {}
 for f, c in filenames_to_captions:
     filenames_captions_dict.setdefault(f, [])
     filenames_captions_dict[f].append(c)
+
+for f in filenames_captions_dict.keys():
+    filenames_captions_dict[f] = preprocess_for_test(filenames_captions_dict[f])
 
 for j, f in enumerate(filenames_captions_dict.keys()):
 

@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 from keras.preprocessing import sequence
 import time
-from utils import get_caption_data, preprocess_captions, load_model, compute_bleu_score_for_batch, tokenize, compute_bleu_score_for_whole_dataset
-
+from utils import get_caption_data, preprocess_captions, load_model, compute_bleu_score_for_batch, tokenize, compute_bleu_score_for_whole_dataset, preprocess_for_test, create_eval_json
+import json
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -70,8 +70,12 @@ def run():
         gen_sent_batch = [gen_sent[:int(s)] for gen_sent, s in zip(gen_sent_batch, caption_sizes)]
         all_gen_sents.extend(gen_sent_batch)
 
-    bleu_score = compute_bleu_score_for_whole_dataset(all_gen_sents, filenames_to_captions)
-    print("bleu_score ", bleu_score)
+    create_eval_json(all_gen_sents, filenames_to_captions)
+    # bleu_score = compute_bleu_score_for_whole_dataset(all_gen_sents, filenames_to_captions)
+    # print("bleu_score ", bleu_score)
+
+    # feats, captions, filenames_to_captions = get_caption_data(mode=mode)
+
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = FLAGS.GPU

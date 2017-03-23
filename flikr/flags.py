@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 # Basic model parameters.
 # tf.app.flags.DEFINE_integer('checkpoint_every', 1242,
 #                             """Checkpoint interval""")
@@ -11,7 +12,7 @@ tf.app.flags.DEFINE_string('GPU', "0",
                            """The GPU device to run on""")
 tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_boolean('resume', True,
+tf.app.flags.DEFINE_boolean('resume', False,
                             """Resume training from latest checkpoint""")
 tf.app.flags.DEFINE_boolean('train', True,
                             """Whether to train or test""")
@@ -40,7 +41,7 @@ tf.app.flags.DEFINE_string('annotation_path', './data/results_20130124.token',
 tf.app.flags.DEFINE_float('initial_learning_rate', 0.001, """Initial learning rate""")
 tf.app.flags.DEFINE_float('momentum', 0.9, """Learning rate momentum""")
 tf.flags.DEFINE_integer("embedding_size", 256, """embedding_size""")
-tf.flags.DEFINE_integer("image_embedding_size", 4096, """embedding_network_size""")
+tf.flags.DEFINE_integer("image_embedding_size", 2048, """embedding_network_size""")
 tf.flags.DEFINE_integer("num_lstm_units", 256, """num_lstm_units""")
 tf.app.flags.DEFINE_integer('min_word_count', 5, """min_word_count""")
 tf.app.flags.DEFINE_integer('gradient_clip_value', 5, """clip_gradient""")
@@ -54,5 +55,5 @@ tf.flags.DEFINE_string("start_word", "<S>",
                        "Special word added to the beginning of each sentence.")
 tf.flags.DEFINE_string("end_word", "</S>",
                        "Special word added to the end of each sentence.")
-tf.flags.DEFINE_string("validate_on", "train",
+tf.flags.DEFINE_string("validate_on", "test",
                        "validate_on")
