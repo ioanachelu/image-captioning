@@ -64,7 +64,7 @@ def run():
     summary_writer, summaries = network.summary()
     summary_bleu = tf.Summary()
 
-    saver = tf.train.Saver(max_to_keep=50)
+    saver = tf.train.Saver(max_to_keep=1000000)
 
     # restore_var = tf.global_variables()
     if FLAGS.resume:

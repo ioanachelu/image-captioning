@@ -11,7 +11,7 @@ tf.app.flags.DEFINE_string('GPU', "0",
                            """The GPU device to run on""")
 tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_boolean('resume', True,
+tf.app.flags.DEFINE_boolean('resume', False,
                             """Resume training from latest checkpoint""")
 tf.app.flags.DEFINE_boolean('train', True,
                             """Whether to train or test""")
@@ -54,3 +54,5 @@ tf.flags.DEFINE_string("start_word", "<S>",
                        "Special word added to the beginning of each sentence.")
 tf.flags.DEFINE_string("end_word", "</S>",
                        "Special word added to the end of each sentence.")
+tf.flags.DEFINE_string("validate_on", "train",
+                       "validate_on")

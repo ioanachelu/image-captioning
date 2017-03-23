@@ -142,6 +142,20 @@ def compute_bleu_score_for_batch(gen_sent, start, end, filenames_to_captions):
     return bleu_score_batch
 
 
+def compute_bleu_score_for_whole_dataset(gen_sent, filenames_to_captions):
+    reference_captions = [get_all_captions_for_filename(f, filenames_to_captions) for f, _ in
+                          filenames_to_captions]
+
+    gen_sent = [[w for w in g if w != FLAGS.start_word and w != FLAGS.end_word] for g in gen_sent]
+    references_hypothesis_assoc = list(zip(reference_captions, gen_sent))
+    cc = nltk.translate.bleu_score.SmoothingFunction()
+    bleu_scores = [nltk.translate.bleu_score.sentence_bleu(references, hypothesis, smoothing_function=cc.method3) for
+                   references, hypothesis in references_hypothesis_assoc]
+    bleu_score = np.mean(bleu_scores)
+
+    return bleu_score
+
+
 def create_eval_json(all_gen_sent, filenames_to_captions_shuffled, mode):
     feats, captions, filenames_to_captions = get_caption_data(mode=mode)
     anns = []
