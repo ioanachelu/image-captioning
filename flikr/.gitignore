@@ -12,3 +12,5 @@ acoustic-guitar-player.jpg
 *.npy
 *.tar.1
 .idea/
+best_model/
+models_backup/

@@ -121,7 +121,7 @@ def run():
         # print(all_gen_sents[0][0])
         print("------------------------")
         print("Reference:")
-        print([' '.join(str(w) for w in c) for c in current_captions])
+        print(' '.join(str(w) for w in current_captions[0]))
         print("Hypothesis:")
         print(' '.join(str(w) for w in gen_sent_batch[0]))
         print("------------------------")
