@@ -11,11 +11,11 @@ tf.app.flags.DEFINE_string('GPU', "0",
                            """The GPU device to run on""")
 tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_boolean('resume', False,
+tf.app.flags.DEFINE_boolean('resume', True,
                             """Resume training from latest checkpoint""")
 tf.app.flags.DEFINE_boolean('train', True,
                             """Whether to train or test""")
-tf.app.flags.DEFINE_string('checkpoint_dir', './best_model/',
+tf.app.flags.DEFINE_string('checkpoint_dir', './models/',
                            """Directory where to read model checkpoints.""")
 tf.app.flags.DEFINE_integer('num_epochs', 1000,
                             """Num of epochs to train the network""")
