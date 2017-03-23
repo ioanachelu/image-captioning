@@ -20,11 +20,11 @@ def randomize_and_split():
     # feats = feats[index]
     # captions = captions[index]
 
-    train_feats = feats[:29000]
+    train_feats = feats[:-5000]
     np.save("./data/train_feats.npy", train_feats)
-    train_captions = captions[:29000]
+    train_captions = captions[:-5000]
     np.save("./data/train_captions.npy", train_captions)
-    train_filename_caption_association = filename_caption_association[:29000]
+    train_filename_caption_association = filename_caption_association[:-5000]
     np.save("./data/train_filename_caption_association.npy", train_filename_caption_association)
 
     # val_feats = feats[28000:29000]
@@ -34,11 +34,11 @@ def randomize_and_split():
     # val_filename_caption_association = filename_caption_association[28000:29000]
     # np.save("./data/val_filename_caption_association.npy", val_filename_caption_association)
 
-    test_feats = feats[29000:]
+    test_feats = feats[-5000:]
     np.save("./data/test_feats.npy", test_feats)
-    test_captions = captions[29000:]
+    test_captions = captions[-5000:]
     np.save("./data/test_captions.npy", test_captions)
-    test_filename_caption_association = filename_caption_association[29000:]
+    test_filename_caption_association = filename_caption_association[-5000:]
     np.save("./data/test_filename_caption_association.npy", test_filename_caption_association)
 
 

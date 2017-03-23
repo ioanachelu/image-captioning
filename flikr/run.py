@@ -72,18 +72,19 @@ def run():
         load_model(loader, sess)
         sess.run(tf.local_variables_initializer())
         step_count = sess.run(global_step)
-        start_step = step_count // num_examples_per_epoch + 1
+        # start_step = step_count // num_examples_per_epoch + 1
 
 
     else:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
-        start_step = 0
+        # start_step = 0
         step_count = 0
 
     increment_global_step = global_step.assign_add(1)
 
-    for epoch in range(start_step, FLAGS.num_epochs):
+    # for epoch in range(start_step, FLAGS.num_epochs):
+    for step in range(step_count,  FLAGS.num_steps):
         start_time = time.time()
         all_gen_sents = []
         for start, end in zip(range(0, len(feats), FLAGS.batch_size), range(FLAGS.batch_size, len(feats), FLAGS.batch_size)):
@@ -114,30 +115,31 @@ def run():
 
             # all_gen_sents.extend(gen_sent_batch)
 
-            step_count += 1
 
-        saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
-        summary_writer.add_summary(summary, step_count)
-        # print(all_gen_sents[0][0])
-        print("------------------------")
-        print("Reference:")
-        print(' '.join(str(w) for w in current_captions[0]))
-        print("Hypothesis:")
-        print(' '.join(str(w) for w in gen_sent_batch[0]))
-        print("------------------------")
-        bleu_score = compute_bleu_score_for_batch(gen_sent_batch, start, end, filenames_to_captions)
-        # print("target_sent: ", current_captions)
-        # print("gen_sent: ", gen_sent)
-        print("bleu_score ", bleu_score)
-        summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
-        summary_writer.add_summary(summary_bleu, step_count)
-        # create_eval_json(all_gen_sents, filenames_to_captions, mode="train")
-        # summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
-        # summary_writer.add_summary(summary_bleu, step_count)
-        # create_eval_json(mode="train")
+            if step % FLAGS.checkpoint_every:
+                saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
+            if step % FLAGS.summary_every:
+                summary_writer.add_summary(summary, step)
+                # print(all_gen_sents[0][0])
+                print("------------------------")
+                print("Reference:")
+                print(' '.join(str(w) for w in current_captions[0]))
+                print("Hypothesis:")
+                print(' '.join(str(w) for w in gen_sent_batch[0]))
+                print("------------------------")
+                bleu_score = compute_bleu_score_for_batch(gen_sent_batch, start, end, filenames_to_captions)
+                # print("target_sent: ", current_captions)
+                # print("gen_sent: ", gen_sent)
+                print("bleu_score ", bleu_score)
+                summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
+                summary_writer.add_summary(summary_bleu, step)
+                # create_eval_json(all_gen_sents, filenames_to_captions, mode="train")
+                # summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
+                # summary_writer.add_summary(summary_bleu, step)
+                # create_eval_json(mode="train")
 
-        duration = time.time() - start_time
-        print('Epoch {:d} \t loss = {:.3f}, mean_BLEU = {:.3f}, ({:.3f} sec/step)'.format(epoch, loss_value, bleu_score, duration))
+                duration = time.time() - start_time
+                print('Step {:d} \t loss = {:.3f}, mean_BLEU = {:.3f}, ({:.3f} sec/step)'.format(step, loss_value, bleu_score, duration))
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = FLAGS.GPU

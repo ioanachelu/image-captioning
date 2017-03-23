@@ -63,7 +63,7 @@ def preprocess_captions(captions):
 
     # take only common words
 
-    common_words = [word for word in counter.items() if word[1] > FLAGS.min_word_count]
+    common_words = [word for word in counter.items() if word[1] >= FLAGS.min_word_count]
 
     print("Nb of common words {}".format(len(common_words)))
 
