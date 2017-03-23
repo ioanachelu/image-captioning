@@ -40,6 +40,7 @@ def tokenize(unprocessed_captions):
 
     return processed_captions
 
+
 def preprocess_for_test(unprocessed_captions):
     processed_captions = []
     for unprocessed_caption in unprocessed_captions:
