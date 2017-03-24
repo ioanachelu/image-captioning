@@ -151,7 +151,7 @@ def compute_bleu_score_for_whole_dataset(gen_sent, filenames_to_captions):
     gen_sent = [' '.join(g) for g in gen_sent]
     references_hypothesis_assoc = list(zip(reference_captions, gen_sent))
     cc = nltk.translate.bleu_score.SmoothingFunction()
-    bleu_scores = [nltk.translate.bleu_score.sentence_bleu(references, hypothesis, smoothing_function=cc.method3) for
+    bleu_scores = [nltk.translate.bleu_score.sentence_bleu(references, hypothesis, smoothing_function=cc.method3) if len(hypothesis) != 0 else 0 for
                    references, hypothesis in references_hypothesis_assoc]
     bleu_score = np.mean(bleu_scores)
 

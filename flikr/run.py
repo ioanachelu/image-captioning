@@ -71,7 +71,7 @@ def run():
         loader = tf.train.Saver()
         load_model(loader, sess)
         sess.run(tf.local_variables_initializer())
-        step_count = sess.run(global_step)
+        step = sess.run(global_step)
         # start_step = step_count // num_examples_per_epoch + 1
 
 
@@ -79,15 +79,15 @@ def run():
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
         # start_step = 0
-        step_count = 0
+        step = 0
 
     increment_global_step = global_step.assign_add(1)
 
     # for epoch in range(start_step, FLAGS.num_epochs):
-    for step in range(step_count,  FLAGS.num_steps):
-        start_time = time.time()
-        all_gen_sents = []
+    while(step < FLAGS.num_steps):
+    # for step in range(step_count,  FLAGS.num_steps):
         for start, end in zip(range(0, len(feats), FLAGS.batch_size), range(FLAGS.batch_size, len(feats), FLAGS.batch_size)):
+            start_time = time.time()
             current_feats = feats[start:end]
             current_captions = captions[start:end]
             current_captions = tokenize(current_captions)
@@ -115,7 +115,6 @@ def run():
 
             # all_gen_sents.extend(gen_sent_batch)
 
-
             if step % FLAGS.checkpoint_every:
                 saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
             if step % FLAGS.summary_every:
@@ -140,6 +139,8 @@ def run():
 
                 duration = time.time() - start_time
                 print('Step {:d} \t loss = {:.3f}, mean_BLEU = {:.3f}, ({:.3f} sec/step)'.format(step, loss_value, bleu_score, duration))
+
+            step += 1
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = FLAGS.GPU
