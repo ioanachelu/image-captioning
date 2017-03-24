@@ -115,9 +115,9 @@ def run():
 
             # all_gen_sents.extend(gen_sent_batch)
 
-            if step % FLAGS.checkpoint_every:
+            if step % FLAGS.checkpoint_every == 0:
                 saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
-            if step % FLAGS.summary_every:
+            if step % FLAGS.summary_every == 0:
                 summary_writer.add_summary(summary, step)
                 # print(all_gen_sents[0][0])
                 print("------------------------")
