@@ -23,11 +23,11 @@ class ShowAndTell():
                 initializer=self.initializer)
 
         self.lstm = tf.contrib.rnn.BasicLSTMCell(self.num_lstm_units)
-        if self.mode == "train":
-            self.lstm = tf.contrib.rnn.DropoutWrapper(
-                self.lstm,
-                input_keep_prob=FLAGS.lstm_dropout_keep_prob,
-                output_keep_prob=FLAGS.lstm_dropout_keep_prob)
+        #if self.mode == "train":
+        #    self.lstm = tf.contrib.rnn.DropoutWrapper(
+        #        self.lstm,
+        #        input_keep_prob=FLAGS.lstm_dropout_keep_prob,
+        #        output_keep_prob=FLAGS.lstm_dropout_keep_prob)
 
         self.embed_word_W = tf.get_variable(shape=[num_lstm_units, n_words], initializer=self.initializer, name='embed_word_W')
 
@@ -104,14 +104,18 @@ class ShowAndTell():
     def train(self, global_step, num_examples_per_epoch):
         all_trainable = [v for v in tf.trainable_variables() if 'beta' not in v.name and 'gamma' not in v.name]
         # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-        decay_steps = int(num_examples_per_epoch * FLAGS.num_epochs_per_decay)
+        if FLAGS.num_epochs_per_decay != 0:
+            decay_steps = int(num_examples_per_epoch * FLAGS.num_epochs_per_decay)
 
-        learning_rate = tf.train.exponential_decay(FLAGS.initial_learning_rate, global_step,
+            learning_rate = tf.train.exponential_decay(FLAGS.initial_learning_rate, global_step,
                                                    decay_steps, FLAGS.learning_rate_decay_factor, staircase=True)
+        else:
+            learning_rate = FLAGS.initial_learning_rate
+
         tf.summary.scalar('LR', learning_rate)
         with tf.control_dependencies([self.maintain_averages_op]):
             # opt = tf.train.AdamOptimizer(learning_rate)
-            opt = tf.train.GradientDescentOptimizer(learning_rate)
+            opt = tf.train.RMSPropOptimizer(learning_rate, FLAGS.momentum)
             grads = tf.gradients(self.loss, all_trainable)
 
             for grad, weight in zip(grads, all_trainable):
