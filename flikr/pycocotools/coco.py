@@ -186,7 +186,7 @@ class COCO:
                     ids = set(self.catToImgs[catId])
                 else:
                     ids &= set(self.catToImgs[catId])
-        return list(ids)
+        return [int(i) for i in list(ids)]
 
     def loadAnns(self, ids=[]):
         """

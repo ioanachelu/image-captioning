@@ -16,7 +16,7 @@ def language_eval(dataset, preds):
 
     coco = COCO(annFile)
     valids = coco.getImgIds()
-    valids = [int(v) for v in valids]
+    # valids = [int(v) for v in valids]
     # filter results to only those in MSCOCO validation set (will be about a third)
     preds_filt = [p for p in preds if p['image_id'] in valids]
     print('using %d/%d predictions' % (len(preds_filt), len(preds)))
