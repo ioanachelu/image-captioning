@@ -27,6 +27,7 @@ def randomize_and_split():
     train_filename_caption_association = filename_caption_association[:-5000]
     np.save("./data/train_filename_caption_association.npy", train_filename_caption_association)
 
+
     # val_feats = feats[28000:29000]
     # np.save("./data/val_feats.npy", val_feats)
     # val_captions = feats[28000:29000]

@@ -9,6 +9,7 @@ import json
 import codecs
 from collections import Counter
 from random import randint
+
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -180,3 +181,58 @@ def create_eval_json(all_gen_sents, filenames_to_captions):
     d = [{'image_id': elem.split(',')[0], "caption": elem.split(',')[1]} for elem in anns]
 
     json.dump(d, open('./results/flicker_' + FLAGS.validate_on + '_res.json', 'w'))
+
+
+def get_filename_id(filename, all_filenames_to_captions):
+    filenames_captions_dict = {}
+    for f, c in all_filenames_to_captions:
+        filenames_captions_dict.setdefault(f, [])
+        filenames_captions_dict[f].append(c)
+    id_ = list(filenames_captions_dict.keys()).index(filename)
+
+
+def clip_by_value(t_list, clip_value_min, clip_value_max, name=None):
+    # if (not isinstance(t_list, collections.Sequence)
+    #     or isinstance(t_list, six.string_types)):
+    #     raise TypeError("t_list should be a sequence")
+    t_list = list(t_list)
+
+    with tf.name_scope(name or "clip_by_value") as name:
+        values = [
+            tf.convert_to_tensor(
+                t.values if isinstance(t, tf.IndexedSlices) else t,
+                name="t_%d" % i)
+            if t is not None else t
+            for i, t in enumerate(t_list)]
+        values_clipped = []
+        for i, v in enumerate(values):
+            if v is None:
+                values_clipped.append(None)
+            else:
+                with tf.get_default_graph().colocate_with(v):
+                    values_clipped.append(
+                        tf.clip_by_value(v, clip_value_min, clip_value_max))
+
+        list_clipped = [
+            tf.IndexedSlices(c_v, t.indices, t.dense_shape)
+            if isinstance(t, tf.IndexedSlices)
+            else c_v
+            for (c_v, t) in zip(values_clipped, t_list)]
+
+    return list_clipped
+
+
+def decode_sequence(batch_of_seq, index_to_word, current_mask_matrix, maxlen):
+    batch_of_sents = [[index_to_word[caption_id] for caption_id in gen_sent if caption_id in index_to_word] for gen_sent
+                      in batch_of_seq]
+    caption_sizes = np.sum(current_mask_matrix, axis=1).tolist()
+    batch_of_sents = [gen_sent[:min(int(s), maxlen)] for gen_sent, s in zip(batch_of_sents, caption_sizes)]
+    return batch_of_sents
+
+
+def get_filename_image_id_associations(mode):
+    print("Loading filename image id associations")
+    image_id_to_filename = np.load('data/' + mode + '_image_id_to_filename.npy')[()]
+    filename_to_image_id = np.load('data/' + mode + '_filename_to_image_id.npy')[()]
+
+    return image_id_to_filename, filename_to_image_id
