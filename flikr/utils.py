@@ -27,8 +27,25 @@ def get_caption_data(mode="train"):
         captions = np.load("data/test_captions.npy")
         filenames_to_captions = np.load("data/test_filename_caption_association.npy")
 
+        feats, captions, filenames_to_captions = preprocess_test_data(feats, captions, filenames_to_captions)
+
     return feats, captions, filenames_to_captions
 
+
+def preprocess_test_data(feats, captions, filenames_to_captions):
+    new_feats = []
+    new_captions = []
+    new_filenames_to_captions = []
+    evaled_filenames = []
+
+    for i, (f, _) in enumerate(filenames_to_captions):
+        if f not in evaled_filenames:
+            new_feats.append(feats[i])
+            new_captions.append(captions[i])
+            new_filenames_to_captions.append(filenames_to_captions[i])
+            evaled_filenames.append(f)
+
+    return np.asarray(new_feats), np.asarray(new_captions), np.asarray(new_filenames_to_captions)
 
 def tokenize(unprocessed_captions):
     processed_captions = []
@@ -227,6 +244,8 @@ def decode_sequence(batch_of_seq, index_to_word, current_mask_matrix, maxlen):
                       in batch_of_seq]
     caption_sizes = np.sum(current_mask_matrix, axis=1).tolist()
     batch_of_sents = [gen_sent[:min(int(s), maxlen)] for gen_sent, s in zip(batch_of_sents, caption_sizes)]
+    batch_of_sents = [[w for w in g if w != FLAGS.start_word and w != FLAGS.end_word] for g in batch_of_sents]
+    batch_of_sents = [' '.join(g) for g in batch_of_sents]
     return batch_of_sents
 
 

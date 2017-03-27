@@ -91,7 +91,7 @@ def eval_split(sess, network, eval_kwargs):
         batch_of_image_ids = [filename_to_image_id[f] for f in batch_of_filenames]
 
         for k, (sent, image_id) in enumerate(list(zip(batch_of_sents, batch_of_image_ids))):
-            entry = {'image_id': image_id, 'caption': sent}
+            entry = {'image_id': str(image_id), 'caption': sent}
             predictions.append(entry)
 
     if language_eval:
@@ -147,7 +147,7 @@ def run():
         utils.load_model(loader, sess)
         sess.run(tf.local_variables_initializer())
         step = sess.run(global_step)
-        start_epoch = step_count // num_examples_per_epoch + 1
+        start_epoch = step // num_examples_per_epoch + 1
 
 
     else:
@@ -200,7 +200,7 @@ def run():
                 print("Reference:")
                 print(' '.join(str(w) for w in current_captions[0]))
                 print("Hypothesis:")
-                print(' '.join(str(w) for w in batch_of_sents[0]))
+                print(batch_of_sents[0])
                 print("------------------------")
                 # bleu_score = utils.compute_bleu_score_for_batch(batch_of_sents, start, end, filenames_to_captions)
                 # summary_bleu.value.add(tag='BLEU', simple_value=float(bleu_score))
@@ -220,11 +220,11 @@ def run():
                 val_loss, predictions, lang_stats = eval_split(sess, network, eval_kwargs)
 
                 summary = tf.Summary(value=[tf.Summary.Value(tag='validation loss', simple_value=val_loss)])
-                summary_writer.add_summary(summary, iteration)
-                for k, v in lang_stats.iteritems():
+                summary_writer.add_summary(summary, step)
+                for k, v in lang_stats.items():
                     summary = tf.Summary(value=[tf.Summary.Value(tag=k, simple_value=v)])
-                    summary_writer.add_summary(summary, iteration)
-                val_result_history[iteration] = {'loss': val_loss, 'lang_stats': lang_stats, 'predictions': predictions}
+                    summary_writer.add_summary(summary, step)
+                val_result_history[step] = {'loss': val_loss, 'lang_stats': lang_stats, 'predictions': predictions}
 
                 # Save model if is improving on validation result
                 if FLAGS.language_eval:

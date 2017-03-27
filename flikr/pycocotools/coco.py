@@ -102,8 +102,8 @@ class COCO:
         if not annotation_file == None:
             print('loading annotations into memory...')
             time_t = datetime.datetime.utcnow()
-            dataset = json_load_byteified(open(annotation_file, 'r'))
-            # dataset = json.load(open(annotation_file, 'r'))
+            # dataset = json_load_byteified(open(annotation_file, 'r'))
+            dataset = json.load(open(annotation_file, 'r'))
             print(datetime.datetime.utcnow() - time_t)
             self.dataset = dataset
             self.createIndex()
@@ -219,7 +219,7 @@ class COCO:
                     ids = set(self.catToImgs[catId])
                 else:
                     ids &= set(self.catToImgs[catId])
-        return [int(i) for i in list(ids)]
+        return [i for i in list(ids)]
 
     def loadAnns(self, ids=[]):
         """
@@ -305,8 +305,8 @@ class COCO:
 
         print('Loading and preparing results...     ')
         time_t = datetime.datetime.utcnow()
-        # anns    = json.load(open(resFile))
-        anns = json_load_byteified(open(resFile))
+        anns    = json.load(open(resFile))
+        # anns = json_load_byteified(open(resFile))
         assert type(anns) == list, 'results in not an array of objects'
         annsImgIds = [ann['image_id'] for ann in anns]
         assert set(annsImgIds) == (set(annsImgIds) & set(self.getImgIds())), \
