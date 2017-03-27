@@ -52,6 +52,38 @@ import numpy as np
 from skimage.draw import polygon
 import copy
 
+
+def json_load_byteified(file_handle):
+    return _byteify(
+        json.load(file_handle, object_hook=_byteify),
+        ignore_dicts=True
+    )
+
+
+def json_loads_byteified(json_text):
+    return _byteify(
+        json.loads(json_text, object_hook=_byteify),
+        ignore_dicts=True
+    )
+
+
+def _byteify(data, ignore_dicts=False):
+    # if this is a unicode string, return its string representation
+    if isinstance(data, unicode):
+        return data.encode('utf-8')
+    # if this is a list of values, return list of byteified values
+    if isinstance(data, list):
+        return [_byteify(item, ignore_dicts=True) for item in data]
+    # if this is a dictionary, return dictionary of byteified keys and values
+    # but only if we haven't already byteified it
+    if isinstance(data, dict) and not ignore_dicts:
+        return {
+            _byteify(key, ignore_dicts=True): _byteify(value, ignore_dicts=True)
+            for key, value in data.iteritems()
+            }
+    # if it's anything else, return it in its original form
+    return data
+
 class COCO:
     def __init__(self, annotation_file=None):
         """
@@ -70,7 +102,8 @@ class COCO:
         if not annotation_file == None:
             print('loading annotations into memory...')
             time_t = datetime.datetime.utcnow()
-            dataset = json.load(open(annotation_file, 'r'))
+            dataset = json_load_byteified(open(annotation_file, 'r'))
+            # dataset = json.load(open(annotation_file, 'r'))
             print(datetime.datetime.utcnow() - time_t)
             self.dataset = dataset
             self.createIndex()
@@ -272,7 +305,8 @@ class COCO:
 
         print('Loading and preparing results...     ')
         time_t = datetime.datetime.utcnow()
-        anns    = json.load(open(resFile))
+        # anns    = json.load(open(resFile))
+        anns = json_load_byteified(open(resFile))
         assert type(anns) == list, 'results in not an array of objects'
         annsImgIds = [ann['image_id'] for ann in anns]
         assert set(annsImgIds) == (set(annsImgIds) & set(self.getImgIds())), \
