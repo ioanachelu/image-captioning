@@ -70,7 +70,7 @@ def json_loads_byteified(json_text):
 def _byteify(data, ignore_dicts=False):
     # if this is a unicode string, return its string representation
     if not isinstance(data, str):
-        return data.encode('utf-8')
+        return data.dencode('utf-8')
     # if this is a list of values, return list of byteified values
     if isinstance(data, list):
         return [_byteify(item, ignore_dicts=True) for item in data]

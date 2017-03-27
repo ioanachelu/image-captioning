@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 from keras.preprocessing import sequence
 import time
-import flikr.utils as utils
+import utils as utils
 # from utils import get_caption_data, preprocess_captions, load_model, compute_bleu_score_for_batch, create_eval_json, tokenize
-import flikr.eval_utils as eval_utils
+import eval_utils as eval_utils
 FLAGS = tf.app.flags.FLAGS
 
 
