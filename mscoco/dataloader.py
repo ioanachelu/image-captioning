@@ -12,10 +12,11 @@ import skimage
 import skimage.io
 import scipy.misc
 import flags
+
 FLAGS = tf.app.flags.FLAGS
 
+
 class DataLoader():
-    
     def __init__(self):
         self.batch_size = FLAGS.batch_size
         # load the json file which contains additional information about the dataset
@@ -23,8 +24,9 @@ class DataLoader():
         self.info = json.load(open(FLAGS.output_json))
         self.index_to_word = self.info['index_to_word']
         self.vocab_size = len(self.index_to_word)
+        self.seq_per_img = 5
         print('vocab size is ', self.vocab_size)
-        
+
         # open the hdf5 file
         print('DataLoader loading h5 file: ', FLAGS.output_h5)
         self.h5_file = h5py.File(FLAGS.output_h5)
@@ -36,8 +38,8 @@ class DataLoader():
         self.num_images = images_size[0]
         self.num_channels = images_size[1]
         self.max_image_size = images_size[2]
-        print('read %d images of size %dx%dx%d' %(self.num_images, 
-                    self.num_channels, self.max_image_size, self.max_image_size))
+        print('read %d images of size %dx%dx%d' % (self.num_images,
+                                                   self.num_channels, self.max_image_size, self.max_image_size))
 
         # load in the sequence data
         seq_size = self.h5_file['labels'].shape
@@ -57,12 +59,12 @@ class DataLoader():
                 self.split_ix['val'].append(ix)
             elif img['split'] == 'test':
                 self.split_ix['test'].append(ix)
-            # elif opt.train_only == 0: # restval
-            #     self.split_ix['train'].append(ix)
+                # elif opt.train_only == 0: # restval
+                #     self.split_ix['train'].append(ix)
 
-        print('assigned %d images to split train' %len(self.split_ix['train']))
-        print('assigned %d images to split val' %len(self.split_ix['val']))
-        print('assigned %d images to split test' %len(self.split_ix['test']))
+        print('assigned %d images to split train' % len(self.split_ix['train']))
+        print('assigned %d images to split val' % len(self.split_ix['val']))
+        print('assigned %d images to split test' % len(self.split_ix['test']))
 
         self.iterators = {'train': 0, 'val': 0, 'test': 0}
 
@@ -79,9 +81,9 @@ class DataLoader():
         split_ix = self.split_ix[split]
         batch_size = batch_size or self.batch_size
 
-        img_batch = np.ndarray([batch_size, 224,224,3], dtype = 'float32')
-        label_batch = np.zeros([batch_size * self.seq_per_img, self.seq_length + 2], dtype = 'int')
-        mask_batch = np.zeros([batch_size * self.seq_per_img, self.seq_length + 2], dtype = 'float32')
+        img_batch = np.ndarray([batch_size, 224, 224, 3], dtype='float32')
+        label_batch = np.zeros([batch_size * self.seq_per_img, self.seq_length + 2], dtype='int')
+        mask_batch = np.zeros([batch_size * self.seq_per_img, self.seq_length + 2], dtype='float32')
 
         max_index = len(split_ix)
         wrapped = False
@@ -98,27 +100,27 @@ class DataLoader():
             ix = split_ix[ri]
 
             # fetch image
-            #img = self.load_image(self.image_info[ix]['filename'])
+            # img = self.load_image(self.image_info[ix]['filename'])
             img = self.h5_file['images'][ix, :, :, :].transpose(1, 2, 0)
-            img_batch[i] = img[16:240, 16:240, :].astype('float32')/255.0
+            img_batch[i] = img[16:240, 16:240, :].astype('float32') / 255.0
 
             # fetch the sequence labels
-            ix1 = self.label_start_ix[ix] - 1 #label_start_ix starts from 1
+            ix1 = self.label_start_ix[ix] - 1  # label_start_ix starts from 1
             ix2 = self.label_end_ix[ix] - 1
-            ncap = ix2 - ix1 + 1 # number of captions available for this image
+            ncap = ix2 - ix1 + 1  # number of captions available for this image
             assert ncap > 0, 'an image does not have any label. this can be handled but right now isn\'t'
 
             if ncap < self.seq_per_img:
                 # we need to subsample (with replacement)
-                seq = np.zeros([self.seq_per_img, self.seq_length], dtype = 'int')
+                seq = np.zeros([self.seq_per_img, self.seq_length], dtype='int')
                 for q in range(self.seq_per_img):
-                    ixl = random.randint(ix1,ix2)
+                    ixl = random.randint(ix1, ix2)
                     seq[q, :] = self.h5_file['labels'][ixl, :self.seq_length]
             else:
                 ixl = random.randint(ix1, ix2 - self.seq_per_img + 1)
                 seq = self.h5_file['labels'][ixl: ixl + self.seq_per_img, :self.seq_length]
 
-            label_batch[i * self.seq_per_img : (i + 1) * self.seq_per_img, 1 : self.seq_length + 1] = seq
+            label_batch[i * self.seq_per_img: (i + 1) * self.seq_per_img, 1: self.seq_length + 1] = seq
 
             # record associated info as well
             info_dict = {}
@@ -127,14 +129,14 @@ class DataLoader():
             infos.append(info_dict)
 
         # generate mask
-        nonzeros = np.array(map(lambda x: (x != 0).sum()+2, label_batch))
+        nonzeros = np.array(list(map(lambda x: (x != 0).sum() + 2, label_batch)))
         for ix, row in enumerate(mask_batch):
             row[:nonzeros[ix]] = 1
 
         data = {}
         data['images'] = img_batch
         data['labels'] = label_batch
-        data['masks'] = mask_batch 
+        data['masks'] = mask_batch
         data['bounds'] = {'it_pos_now': self.iterators[split], 'it_max': len(split_ix), 'wrapped': wrapped}
         data['infos'] = infos
 
@@ -142,4 +144,4 @@ class DataLoader():
 
     def reset_iterator(self, split):
         self.iterators[split] = 0
-        
+

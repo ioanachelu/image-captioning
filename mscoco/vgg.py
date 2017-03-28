@@ -13,7 +13,7 @@ class Vgg16:
             self.data_dict = {}
         else:
             assert os.path.isfile(vgg16_npy_path), vgg16_npy_path + " doesn't exist."
-            self.data_dict = np.load(vgg16_npy_path).item()
+            self.data_dict = np.load(vgg16_npy_path, encoding='latin1').item()
             print("npy file loaded")
 
     def build(self, rgb):

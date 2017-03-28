@@ -193,10 +193,6 @@ def create_dataset():
     f.close()
     print('wrote ', FLAGS.output_h5)
 
-    create_output_json(index_to_word)
-
-
-def create_output_json(index_to_word):
     # create output json file
     out = {}
     out['index_to_word'] = index_to_word  # encode the (1-indexed) vocab
