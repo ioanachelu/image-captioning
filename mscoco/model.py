@@ -186,4 +186,4 @@ class ShowAndTell():
 
     def summary_saver(self):
         self.summary_writer = tf.summary.FileWriter(FLAGS.summaries_dir, graph=self.sess.graph)
-        self.saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=1000000)
+        self.saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=50)

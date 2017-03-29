@@ -1,3 +1,7 @@
+annotations/
+*.py~
+train2014/
+val2014/
 *.pyc
 *.bak
 tmp.json

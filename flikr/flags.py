@@ -58,6 +58,7 @@ tf.flags.DEFINE_string("validate_on", "test",
                        "validate_on")
 tf.app.flags.DEFINE_float('initializer_scale', 0.1, """initializer_scalle""")
 tf.app.flags.DEFINE_float('lstm_dropout_keep_prob', 0.5, """lstm_dropout_keep_prob""")
+tf.app.flags.DEFINE_float('cnn_lr', 1e-5, """cnn_lr""")
 tf.app.flags.DEFINE_boolean('language_eval', True, """Evaluate language as well? BLEU/CIDEr/METEOR/ROUGE_L? requires coco-caption code from Github.""")
 tf.app.flags.DEFINE_float('val_images_use', -1,
                           """how many images to use when periodically evaluating the validation loss? (-1 = all)""")
