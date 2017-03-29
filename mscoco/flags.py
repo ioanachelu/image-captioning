@@ -1,9 +1,9 @@
 import tensorflow as tf
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('checkpoint_every', 1,
+tf.app.flags.DEFINE_integer('checkpoint_every', 2000,
                             """Checkpoint interval""")
-tf.app.flags.DEFINE_integer('summary_every', 1,
+tf.app.flags.DEFINE_integer('summary_every', 24,
                             """Summary interval""")
 tf.app.flags.DEFINE_integer('test_summary_every', 1,
                             """Summary interval""")
@@ -45,7 +45,7 @@ tf.flags.DEFINE_string("end_word", "</S>",
                        "Special word added to the end of each sentence.")
 tf.flags.DEFINE_string("unknown_word", "<UNK>",
                        "Special word meaning 'unknown'.")
-tf.flags.DEFINE_integer("min_word_count", 4,
+tf.flags.DEFINE_integer("min_word_count", 5,
                         "The minimum number of occurrences of each word in the "
                         "training set for inclusion in the vocabulary.")
 tf.flags.DEFINE_string("word_counts_output_file", "./mscoco/word_counts.txt",

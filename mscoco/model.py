@@ -58,8 +58,6 @@ class ShowAndTell():
                 inputs=self.fc7,
                 num_outputs=self.embedding_size,
                 activation_fn=None,
-                weights_initializer=self.initializer,
-                biases_initializer=None,
                 scope='encode_image')
 
     def build_model(self):
@@ -70,7 +68,7 @@ class ShowAndTell():
         # ema = tf.train.ExponentialMovingAverage(FLAGS.moving_average_decay, name='loss_avg')
         # self.generated_words = [tf.cast(self.labels[:, 0], dtype=tf.int64)]
 
-        with tf.variable_scope("lstm", initializer=self.initializer) as lstm_scope:
+        with tf.variable_scope("lstm") as lstm_scope:
             # Replicate self.seq_per_img times for each image embedding
             image_emb = tf.reshape(tf.tile(tf.expand_dims(self.image_emb, 1), [1, 5, 1]),
                                    [self.batch_size * 5, self.embedding_size])
@@ -93,7 +91,6 @@ class ShowAndTell():
                 inputs=outputs,
                 num_outputs=self.vocab_size + 1,
                 activation_fn=None,
-                weights_initializer=self.initializer,
                 scope='logit')
             self.logits = tf.split(axis=0, num_or_size_splits=len(rnn_inputs) - 1, value=self.logits)
 
@@ -147,7 +144,7 @@ class ShowAndTell():
         # self.sample_max = tf.Variable(True, trainable=False, name="sample_max")
 
         self.generator = []
-        with tf.variable_scope("lstm", initializer=self.initializer) as lstm_scope:
+        with tf.variable_scope("lstm") as lstm_scope:
             with tf.device("/cpu:0"):
                 current_emb = tf.nn.embedding_lookup(self.embedding_map, tf.zeros([self.batch_size], tf.int32))
 
@@ -164,7 +161,6 @@ class ShowAndTell():
                         inputs=prev,
                         num_outputs=self.vocab_size + 1,
                         activation_fn=None,
-                        weights_initializer=self.initializer,
                         scope='logit')
                     prev_symbol = tf.stop_gradient(tf.argmax(prev, 1))  # Sample from the distribution
                     self.generator.append(prev_symbol)
@@ -178,7 +174,6 @@ class ShowAndTell():
                         inputs=output,
                         num_outputs=self.vocab_size + 1,
                         activation_fn=None,
-                        weights_initializer=self.initializer,
                         scope='logit')
             self.g_probs = probs = tf.reshape(tf.nn.softmax(logits), [self.batch_size, MAX_STEPS, self.vocab_size + 1])
 
