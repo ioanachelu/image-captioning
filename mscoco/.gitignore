@@ -1,3 +1,5 @@
+.ipynb_checkpoints/
+captions/
 annotations/
 *.py~
 train2014/

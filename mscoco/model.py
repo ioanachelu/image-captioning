@@ -85,14 +85,17 @@ class ShowAndTell():
 
             outputs, last_state = tf.contrib.legacy_seq2seq.rnn_decoder(rnn_inputs, initial_state, self.lstm,
                                                                         loop_function=None)
+            # outputs, last_state = tf.nn.dynamic_rnn(self.lstm, rnn_inputs, initial_state=initial_state)
 
             outputs = tf.concat(axis=0, values=outputs[1:])
-            self.logits = tf.contrib.layers.fully_connected(
+            self.logits_flat = tf.contrib.layers.fully_connected(
                 inputs=outputs,
                 num_outputs=self.vocab_size + 1,
                 activation_fn=None,
                 scope='logit')
-            self.logits = tf.split(axis=0, num_or_size_splits=len(rnn_inputs) - 1, value=self.logits)
+            self.logits = tf.split(axis=0, num_or_size_splits=len(rnn_inputs) - 1, value=self.outputs)
+
+
 
         with tf.variable_scope("loss"):
             loss = tf.contrib.legacy_seq2seq.sequence_loss_by_example(self.logits,
@@ -106,6 +109,12 @@ class ShowAndTell():
                                                                                 num_or_size_splits=self.seq_length + 1,
                                                                                 value=self.masks[:, 1:])])
             self.loss = tf.reduce_mean(loss)
+
+        # with tf.variable_scope("loss"):
+        #     losses = tf.nn.sparse_softmax_cross_entropy_with_logits(self.logits_flat, self.labels[:, 1:])
+        #     masked_losses = self.masks[:, 1:] * losses
+        #     mean_loss_by_example = tf.reduce_sum(masked_losses, reduction_indices=1) / self.seq_length + 1
+        #     self.loss = tf.reduce_mean(mean_loss_by_example)
 
         self.final_state = last_state
         self.lr = tf.Variable(0.0, trainable=False)
