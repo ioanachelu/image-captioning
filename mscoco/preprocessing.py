@@ -8,102 +8,90 @@ from random import shuffle, seed
 from scipy.misc import imread, imresize
 import flags
 from collections import Counter
+
 FLAGS = tf.app.flags.FLAGS
 
+
 def preprocess_mscoco_data():
+    # Load the MSCOCO annotations
     val = json.load(open('annotations/captions_val2014.json', 'r'))
     train = json.load(open('annotations/captions_train2014.json', 'r'))
 
     imgs = val['images'] + train['images']
     annots = val['annotations'] + train['annotations']
 
-    # for efficiency lets group annotations by image
-    itoa = {}
+    index_to_annotation = {}
     for a in annots:
         imgid = a['image_id']
-        if not imgid in itoa: itoa[imgid] = []
-        itoa[imgid].append(a)
+        index_to_annotation.setdefault(imgid, [])
+        index_to_annotation[imgid].append(a)
 
-    # create the json blob
-    out = []
+    # Construct json containing a list of image dictionaries containing for each image: image_id, file_path and list of
+    # captions
+    image_list = []
     for i, img in enumerate(imgs):
-        imgid = img['id']
+        # MSCOCO file path differ for images in  predefined train vs validation set
+        image_info = {}
+        image_info['file_path'] = os.path.join('train2014' if 'train' in img['file_name'] else 'val2014',
+                                               img['file_name'])
+        image_info['id'] = img['id']
 
-        # coco specific here, they store train/val images separately
-        loc = 'train2014' if 'train' in img['file_name'] else 'val2014'
+        image_info['captions'] = [a['caption'] for a in index_to_annotation[img['id']]]
+        image_list.append(image_info)
 
-        jimg = {}
-        jimg['file_path'] = os.path.join(loc, img['file_name'])
-        jimg['id'] = imgid
-
-        sents = []
-        annotsi = itoa[imgid]
-        for a in annotsi:
-            sents.append(a['caption'])
-        jimg['captions'] = sents
-        out.append(jimg)
-
-    json.dump(out, open(FLAGS.input_json, 'w'))
+    json.dump(image_list, open(FLAGS.input_json, 'w'))
 
 
-def tokenize(imgs):
-    for i, img in enumerate(imgs):
-        img['processed_tokens'] = []
-        for j, s in enumerate(img['captions']):
-            txt = str(s).lower().translate(string.punctuation).strip().split()
-            img['processed_tokens'].append(txt)
+def tokenize(image_list):
+    for i, image_info in enumerate(image_list):
+        image_info['processed_tokens'] = [str(s).lower().translate(string.punctuation).strip().split() for s in
+                                          image_info['captions']]
 
 
-def build_vocab(imgs):
+def build_vocab(image_list):
     captions = []
-    for i, img in enumerate(imgs):
-        captions.extend(img['processed_tokens'])
+    for i, image_info in enumerate(image_list):
+        captions.extend(image_info['processed_tokens'])
 
     counter = Counter()
     for caption in captions:
         counter.update(caption)
 
     print("Nb of words {}".format(len(counter)))
-
+    # keep only the common words
     common_words = [word for word in counter.items() if word[1] >= FLAGS.min_word_count]
-
     print("Nb of common words {}".format(len(common_words)))
 
-    sent_lengths = {}
-    for img in imgs:
-        for txt in img['processed_tokens']:
-            nw = len(txt)
-            sent_lengths[nw] = sent_lengths.get(nw, 0) + 1
-    max_len = max(sent_lengths.keys())
-    print('max length sentence in raw data: ', max_len)
+    max_len = np.max([len(c) for c in captions])
+    print('Max length of a sentence: {}, but will trim them at {}'.format(max_len, FLAGS.max_length))
 
     # additional special UNK token we will use below to map infrequent words to
-    print('inserting the special UNK token')
+    print('Inserting the special UNK token for unknown words that did not get '
+          'selected in the vocabulary - too infrequent')
     vocab = [word_count[0] for word_count in common_words]
     vocab.append('UNK')
 
-    for img in imgs:
-        img['final_captions'] = []
-        for txt in img['processed_tokens']:
-            caption = [w if counter.get(w) > FLAGS.min_word_count else 'UNK' for w in txt]
-            img['final_captions'].append(caption)
+    # replace words not in vocabulary with unknown
+    for image_info in image_list:
+        image_info['final_captions'] = [[w if counter.get(w) > FLAGS.min_word_count else 'UNK' for w in caption] for
+                                        caption in image_info['processed_tokens']]
 
     return vocab
 
 
-def split_train_test(imgs):
-    for i, img in enumerate(imgs):
+def split_train_test(image_list):
+    for i, image_info in enumerate(image_list):
         if i < 5000:
-            img['split'] = 'val'
+            image_info['split'] = 'val'
         elif i < 1000:
-            img['split'] = 'test'
+            image_info['split'] = 'test'
         else:
-            img['split'] = 'train'
+            image_info['split'] = 'train'
 
-    print('assigned 5000 to val, 5000 to test.')
+    print('Keeping 5000 for validation, 1000 for testing. Train on the rest')
 
 
-def encode_captions(imgs, word_to_index):
+def encode_captions(image_list, word_to_index):
     """
     encode all captions into one large array, which will be 1-indexed.
     also produces label_start_ix and label_end_ix which store 1-indexed
@@ -111,104 +99,122 @@ def encode_captions(imgs, word_to_index):
     each image in the dataset.
     """
 
-    no_images = len(imgs)
-    no_captions = sum(len(img['final_captions']) for img in imgs)
+    no_images = len(image_list)
+    no_captions = sum(len(image_info['final_captions']) for image_info in image_list)
 
-    label_arrays = []
-    label_start_ix = np.zeros(no_images, dtype='uint32')
-    label_end_ix = np.zeros(no_images, dtype='uint32')
-    label_length = np.zeros(no_captions, dtype='uint32')
+    # list of caption arrays
+    caption_arrays_list = []
+    # array of pointers to the first caption of each image
+    first_caption_pointer_array = np.zeros(no_images, dtype='uint32')
+    # array of pointers to the last caption of each image
+    last_caption_pointer_array = np.zeros(no_images, dtype='uint32')
+
+    # array of length of all captions for each image
+    full_captions_length_array = np.zeros(no_captions, dtype='uint32')
 
     caption_counter = 0
     counter = 1
-    for i, img in enumerate(imgs):
-        n = len(img['final_captions'])
-        assert n > 0, 'error: some image has no captions'
+    for i, image_info in enumerate(image_list):
+        no_captions_per_image = len(image_info['final_captions'])
+        assert no_captions_per_image > 0, 'Error: some image has no captions. Should be 5 for all.'
 
-        Li = np.zeros((n, FLAGS.max_length), dtype='uint32')
-        for j, s in enumerate(img['final_captions']):
-            label_length[caption_counter] = min(FLAGS.max_length, len(s))
+        # alocate space for each caption to be max_length long
+        image_captions_array = np.zeros((no_captions_per_image, FLAGS.max_length), dtype='uint32')
+        for j, caption in enumerate(image_info['final_captions']):
+            full_captions_length_array[caption_counter] = min(FLAGS.max_length, len(caption))
             caption_counter += 1
-            for k, w in enumerate(s):
+            # load the caption words in the allocated array
+            for k, w in enumerate(caption):
                 if k < FLAGS.max_length:
-                    Li[j, k] = word_to_index[w]
+                    image_captions_array[j, k] = word_to_index[w]
 
-        # note: word indices are 1-indexed, and captions are padded with zeros
-        label_arrays.append(Li)
-        label_start_ix[i] = counter
-        label_end_ix[i] = counter + n - 1
+        caption_arrays_list.append(image_captions_array)
+        first_caption_pointer_array[i] = counter
+        last_caption_pointer_array[i] = counter + no_captions_per_image - 1
 
-        counter += n
+        counter += no_captions_per_image
 
-    L = np.concatenate(label_arrays, axis=0)  # put all the labels together
-    assert L.shape[0] == no_captions, 'lengths don\'t match? that\'s weird'
-    assert np.all(label_length > 0), 'error: some caption had no words?'
+    # put all the captions in a big array
+    caption_array = np.concatenate(caption_arrays_list, axis=0)
+    assert caption_array.shape[
+               0] == no_captions, 'First dimension of the caption array should be the number of captions'
+    assert np.all(full_captions_length_array > 0), 'All captions should have words'
 
-    print('encoded captions to array of size ', L.shape)
-    return L, label_start_ix, label_end_ix, label_length
+    print('Encoded captions in an array with shape ', caption_array.shape)
+    return caption_array, first_caption_pointer_array, last_caption_pointer_array, full_captions_length_array
 
 
 def create_dataset():
-    imgs = json.load(open(FLAGS.input_json, 'r'))
-    seed(123)  # make reproducible
-    shuffle(imgs)  # shuffle the order
+    # Load the raw json file
+    image_list = json.load(open(FLAGS.input_json, 'r'))
+    seed(123)
+    shuffle(image_list)  # shuffle with the same seed
 
-    tokenize(imgs)
-    vocab = build_vocab(imgs)
+    # preprocess captions: tokenize, split, decapitalize
+    tokenize(image_list)
+    # build the vocabulary dictionary
+    vocab = build_vocab(image_list)
 
-    index_to_word = {i + 1: w for i, w in enumerate(vocab)}  # a 1-indexed vocab translation table
-    word_to_index = {w: i + 1 for i, w in enumerate(vocab)}  # inverse table
+    # a dictionay indexed at 1 containing a mapping index - vocabulary word
+    index_to_word = {i + 1: w for i, w in enumerate(vocab)}
+    # the inverse mapping of index_to_word
+    word_to_index = {w: i + 1 for i, w in enumerate(vocab)}
 
-    split_train_test(imgs)
+    # split the processed dataset into train-val-test sets and add tags for each image
+    split_train_test(image_list)
 
-    # encode captions in large arrays, ready to ship to hdf5 file
-    L, label_start_ix, label_end_ix, label_length = encode_captions(imgs, word_to_index)
+    # encode captions in large arrays, ready to store in hdf5 file format
+    captions_array, first_caption_pointer_array, last_caption_pointer_array, full_captions_length_array = encode_captions(
+        image_list, word_to_index)
 
     # create output h5 file
-    N = len(imgs)
+    no_images = len(image_list)
     f = h5py.File(FLAGS.output_h5, "w")
-    f.create_dataset("labels", dtype='uint32', data=L)
-    f.create_dataset("label_start_ix", dtype='uint32', data=label_start_ix)
-    f.create_dataset("label_end_ix", dtype='uint32', data=label_end_ix)
-    f.create_dataset("label_length", dtype='uint32', data=label_length)
-    dset = f.create_dataset("images", (N, 3, 256, 256), dtype='uint8') # space for resized images
-    for i, img in enumerate(imgs):
+    f.create_dataset("captions", dtype='uint32', data=captions_array)
+    f.create_dataset("first_caption_pointer_array", dtype='uint32', data=first_caption_pointer_array)
+    f.create_dataset("last_caption_pointer_array", dtype='uint32', data=last_caption_pointer_array)
+    f.create_dataset("full_captions_length_array", dtype='uint32', data=full_captions_length_array)
+    h5_dataset = f.create_dataset("images", (no_images, 3, 256, 256), dtype='uint8')
+    for i, image_info in enumerate(image_list):
         # load the image
-        I = imread(img['file_path'])
+        img = imread(image_info['file_path'])
         try:
-            Ir = imresize(I, (256,256))
+            # resize the images
+            img_resized = imresize(img, (256, 256))
         except:
-            print('failed resizing image %s - see http://git.io/vBIE0' % (img['file_path'],))
+            print('Error: failed to resize image {}'.format(image_info['file_path']))
             raise
-        # handle grayscale input images
-        if len(Ir.shape) == 2:
-            Ir = Ir[:,:,np.newaxis]
-            Ir = np.concatenate((Ir,Ir,Ir), axis=2)
-        # and swap order of axes from (256,256,3) to (3,256,256)
-        Ir = Ir.transpose(2,0,1)
-        # write to h5
-        dset[i] = Ir
+        # concatenate the single channel if we have grayscale images with only 1 channel
+        if len(img_resized.shape) == 2:
+            img_resized = img_resized[:, :, np.newaxis]
+            img_resized = np.concatenate((img_resized, img_resized, img_resized), axis=2)
+        # Swap the axes channel wise because that is how the VGG processes the image
+        img_resized = img_resized.transpose(2, 0, 1)
+        # load in the h5 dataset
+        h5_dataset[i] = img_resized
+        # print the progress of the process
         if i % 1000 == 0:
-            print('processing %d/%d (%.2f%% done)' % (i, N, i*100.0/N))
+            print('Processing {:d}/{:d} ({:.2f%}% done)'.format(i, no_images, i * 100 / no_images))
     f.close()
-    print('wrote ', FLAGS.output_h5)
+    print('Finished writing the H5 dataset file {}'.format(FLAGS.output_h5))
 
-    # create output json file
+    # create output json file containing the index_to_word mapping of the vocabulary and also for each image: id,
+    # filename and the split type: train, test, validation
     out = {}
-    out['index_to_word'] = index_to_word  # encode the (1-indexed) vocab
+    out['index_to_word'] = index_to_word
     out['images'] = []
-    for i, img in enumerate(imgs):
-        jimg = {}
-        jimg['split'] = img['split']
-        if 'file_path' in img:
-            jimg['file_path'] = img['file_path']  # copy it over, might need
-        if 'id' in img:
-            jimg['id'] = img['id']  # copy over & mantain an id, if present (e.g. coco ids, useful)
+    for i, image_info in enumerate(image_list):
+        image_dict = {}
+        image_dict['split'] = image_info['split']
+        if 'file_path' in image_info:
+            image_dict['file_path'] = image_info['file_path']
+        if 'id' in image_info:
+            image_dict['id'] = image_info['id']
 
-        out['images'].append(jimg)
+        out['images'].append(image_dict)
 
     json.dump(out, open(FLAGS.output_json, 'w'))
-    print('wrote ', FLAGS.output_json)
+    print('Finished writing the output json with index to word dict and image infos {}'.format(FLAGS.output_json))
 
 
 if __name__ == "__main__":

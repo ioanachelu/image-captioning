@@ -3,8 +3,10 @@ import flags
 FLAGS = tf.app.flags.FLAGS
 
 
-def clip_by_value(t_list, clip_value_min, clip_value_max, name=None):
-    t_list = list(t_list)
+# Clip each value in the gradient tensor between the clip_value_min and clip_value_max as recommended in Karpathy
+# Deep Visual-Semantic Alignments for Generating Image Descriptions
+def clip_by_value(tensor_list, clip_value_min, clip_value_max, name=None):
+    tensor_list = list(tensor_list)
 
     with tf.name_scope(name or "clip_by_value") as name:
         values = [
@@ -12,7 +14,7 @@ def clip_by_value(t_list, clip_value_min, clip_value_max, name=None):
                 t.values if isinstance(t, tf.IndexedSlices) else t,
                 name="t_%d" % i)
             if t is not None else t
-            for i, t in enumerate(t_list)]
+            for i, t in enumerate(tensor_list)]
         values_clipped = []
         for i, v in enumerate(values):
             if v is None:
@@ -26,28 +28,22 @@ def clip_by_value(t_list, clip_value_min, clip_value_max, name=None):
             tf.IndexedSlices(c_v, t.indices, t.dense_shape)
             if isinstance(t, tf.IndexedSlices)
             else c_v
-            for (c_v, t) in zip(values_clipped, t_list)]
+            for (c_v, t) in zip(values_clipped, tensor_list)]
 
     return list_clipped
 
-# Input: seq, N*D numpy array, with element 0 .. vocab_size. 0 is END token.
-def decode_sequence(index_to_word, seq):
-    N, D = seq.shape
+
+# Transform output_sequence from word indexes to words - index 0 is reserved for EOS
+def decode_sequence(index_to_word, output_sequence):
+    batch, caption_length = output_sequence.shape
     out = []
-    for i in range(N):
-        txt = ''
-        for j in range(D):
-            ix = seq[i,j]
-            if ix > 0 :
-                if j >= 1:
-                    txt = txt + ' '
-                txt = txt + index_to_word[str(ix)]
-            else:
-                break
-        out.append(txt)
+    for i in range(batch):
+        caption = ' '.join([index_to_word[str(output_sequence[i, j])] for j in range(caption_length) if output_sequence[i, j] > 0])
+        out.append(caption)
     return out
 
 
+# Load model from a previous checkpoint
 def load_model(saver, sess):
     ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
     saver.restore(sess, ckpt.model_checkpoint_path)
