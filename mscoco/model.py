@@ -189,7 +189,7 @@ class ShowAndTell():
 
             initial_state = self.lstm.zero_state(self.batch_size, tf.float32)
 
-            tf.get_variable_scope().reuse_variables()
+            lstm_scope.reuse_variables()
 
             def decode_greedy(prev, i):
                 if i == 1:
@@ -222,6 +222,41 @@ class ShowAndTell():
             self.g_probs = tf.reshape(tf.nn.softmax(self.g_logits), [self.batch_size, MAX_STEPS, self.vocab_size + 1])
 
         self.generator = tf.transpose(tf.reshape(tf.concat(axis=0, values=self.generator), [MAX_STEPS - 1, -1]))
+
+    def build_beam_search_generator(self):
+        with tf.variable_scope("lstm") as lstm_scope:
+            # Pas zero as BOS token
+            batch_size = tf.shape(self.image_emb)[0]
+
+            lstm_scope.reuse_variables()
+            initial_state = self.cell.zero_state(batch_size, tf.float32)
+            output, state = self.lstm(self.image_emb, initial_state)
+            logits = tf.contrib.layers.fully_connected(
+                        inputs=output,
+                        num_outputs=self.vocab_size + 1,
+                        activation_fn=None,
+                        scope='logit')
+            probabilities = tf.reshape(tf.nn.softmax(logits), [batch_size, self.vocab_size + 1])
+
+            self.decoder_prev_word = tf.placeholder(tf.int32, [None])
+            with tf.device("/cpu:0"):
+                rnn_input = tf.nn.embedding_lookup(self.embedding_map, self.decoder_prev_word)
+
+            self.decoder_initial_state = initial_state = state
+
+            output, state = self.lstm(rnn_input, initial_state)
+            logits = tf.contrib.layers.fully_connected(
+                inputs=output,
+                num_outputs=self.vocab_size + 1,
+                activation_fn=None,
+                scope='logit')
+            probabilities = tf.reshape(tf.nn.softmax(logits), [batch_size, self.vocab_size + 1])
+
+            return [probabilities, state]
+
+    def decode(self):
+
+        pass
 
     def summary_saver(self):
         self.summary_writer = tf.summary.FileWriter(FLAGS.summaries_dir, graph=self.sess.graph)

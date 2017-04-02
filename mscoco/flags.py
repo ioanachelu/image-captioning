@@ -65,3 +65,5 @@ tf.flags.DEFINE_float("lstm_dropout_keep_prob", 0.5, """Keep probability used fo
 tf.app.flags.DEFINE_float('gradient_clip_value', 5.0, """Clip gradients to this value""")
 tf.app.flags.DEFINE_float('initializer_scale', 0.1,
                           """Interval for uniform distributions of weights used to initialize the fully connected layer of the output logits""")
+tf.flags.DEFINE_integer("beam_search_size", 2, """The size of the candidates for beam search""")
+

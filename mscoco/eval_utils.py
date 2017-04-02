@@ -3,6 +3,8 @@ from json import encoder
 import utils
 import tensorflow as tf
 import os
+import flags
+FLAGS = tf.app.flags.FLAGS
 
 # Evaluate predictions using NLP metrics: BLEU-1, BLEU-2, BLEU-3, BLEU-4, ROUGE and CIDEr. METEOR is skiped because the
 # coco-caption code has some leaks and so as not to mess up the run
@@ -45,6 +47,27 @@ def language_eval(dataset_json, preds):
     return out
 
 
+def greey_sampling(model, loader, data, predictions, sess):
+    # do an inverence to get the predicted caption sequences
+    feed = {model.images: data['images']}
+    seq = sess.run(model.generator, feed)
+
+    # decode sequences to words from indexes
+    sents = utils.decode_sequence(loader.get_vocab(), seq)
+
+    #load predictions in a dictionary with image id and predicted captions to be used by the language eval function
+    for k, sent in enumerate(sents):
+        entry = {'image_id': data['infos'][k]['id'], 'caption': sent}
+        predictions.append(entry)
+
+
+def beam_search(model, loader, data, predictions, sess):
+    seq = model.decode(data['images'], sess)
+    sents = [' '.join([loader.get_vocab().get(str(index), '') for index in sent]).strip() for sent in seq]
+    entry = {'image_id': data['infos'][0]['id'], 'caption': sents[0]}
+    predictions.append(entry)
+
+
 # Do one step of evaluation using the validation dataset
 def val_eval(sess, model, loader, eval_kwargs):
     val_images_use = eval_kwargs.get('val_images_use', -1)
@@ -75,17 +98,10 @@ def val_eval(sess, model, loader, eval_kwargs):
         loss_sum = loss_sum + loss
         loss_evals = loss_evals + 1
 
-        # do an inverence to get the predicted caption sequences
-        feed = {model.images: data['images']}
-        seq = sess.run(model.generator, feed)
-
-        # decode sequences to words from indexes
-        sents = utils.decode_sequence(loader.get_vocab(), seq)
-
-        #load predictions in a dictionary with image id and predicted captions to be used by the language eval function
-        for k, sent in enumerate(sents):
-            entry = {'image_id': data['infos'][k]['id'], 'caption': sent}
-            predictions.append(entry)
+        if FLAGS.beam_search_size == 1:
+            greey_sampling(model, loader, data, predictions, sess)
+        else:
+            beam_search(model, loader, data, predictions, sess)
 
         ix0 = data['bounds']['it_pos_now']
         ix1 = data['bounds']['it_max']
