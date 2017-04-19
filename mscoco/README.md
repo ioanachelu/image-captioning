@@ -60,9 +60,12 @@ at a new location: in the ```captions``` folder previously created as empty
         $ python compute_imgs_pred.py
 * this will save a new image for each of the images in the ```captions``` folder in the ```imgs_captions_test``` folder previously created. These new saved images have
  as title the caption describing each of them
+ 
+ * you can evaluate with greedy decoding by specifying ```--beam_search_size=1``` or with beam seach by using ```--beam_search_size=1```
 
 ### Tensorboard visualizations
-* during training you can follow the progress using tensorboard visualizations by running from the summaries directory specified in the flags.py file or
+* during training you can follow the progress using tensorboard visualizations by running from the summaries directory 
+specified in the flags.py file or
 given as command line argument:
 
         $ tensorboard --logdir=.
