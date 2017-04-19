@@ -8,6 +8,7 @@ import eval_utils
 from model import ShowAndTell
 import flags
 import time
+import val
 from dataloader import DataLoader
 FLAGS = tf.app.flags.FLAGS
 
@@ -29,7 +30,7 @@ def recreate_directory_structure():
 
 
 def train():
-    recreate_directory_structure()
+    # recreate_directory_structure()
 
     # Initialize the data loader class
     loader = DataLoader()
@@ -64,6 +65,7 @@ def train():
 
         # Handle training from scratch vs resuming training from a previously saved model
         if FLAGS.resume:
+            sess.run(tf.global_variables_initializer())
             utils.load_model(model.saver, sess)
             sess.run(tf.local_variables_initializer())
             step = sess.run(global_step)
@@ -92,7 +94,7 @@ def train():
             print('Read data took :', time.time() - start_time)
 
             start_time = time.time()
-            feed = {model.images: data['images'], model.labels: data['captions'], model.masks: data['masks']}
+            feed = {model.images: data['images'], model.captions: data['captions'], model.masks: data['masks']}
 
             if step <= FLAGS.finetune_cnn_after or FLAGS.finetune_cnn_after == -1:
                 train_loss, merged, _, _ = sess.run(
@@ -111,32 +113,7 @@ def train():
                 model.summary_writer.add_summary(merged, step)
                 model.summary_writer.flush()
 
-            # Do evaluation procedure and if model is better save it
-            if step % FLAGS.checkpoint_every == 0:
-                eval_kwargs = {'val_images_use': FLAGS.val_images_use,
-                               'split': 'val',
-                               'language_eval': FLAGS.language_eval,
-                               'dataset': FLAGS.output_json}
-                val_loss, predictions, lang_stats = eval_utils.val_eval(sess, model, loader, eval_kwargs)
-
-                # Add summaries with validation loss and NLP metrics results
-                summary = tf.Summary(value=[tf.Summary.Value(tag='validation loss', simple_value=val_loss)])
-                model.summary_writer.add_summary(summary, step)
-                for k, v in lang_stats.items():
-                    summary = tf.Summary(value=[tf.Summary.Value(tag=k, simple_value=v)])
-                    model.summary_writer.add_summary(summary, step)
-
-                # Save model if is improving on validation result
-                if FLAGS.language_eval:
-                    current_score = lang_stats['CIDEr']
-                else:
-                    current_score = - val_loss
-
-                # Save model if score ( loss or NLP metric CIDEr result improved on the validation set )
-                if best_val_score is None or current_score > best_val_score:  # if true
-                    best_val_score = current_score
-                    model.saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
-                    print("model saved to {}".format(os.path.join(FLAGS.checkpoint_dir, 'model')))
+            best_val_score = val.validate(step, global_step, sess, model, loader, best_val_score)
 
             step += 1
             if data['bounds']['wrapped']:

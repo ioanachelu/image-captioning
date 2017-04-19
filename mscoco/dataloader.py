@@ -117,10 +117,10 @@ class DataLoader():
                 seq = np.zeros([self.seq_per_img, self.seq_length], dtype='int')
                 for q in range(self.seq_per_img):
                     ixl = random.randint(ix1, ix2)
-                    seq[q, :] = self.h5_file['labels'][ixl, :self.seq_length]
+                    seq[q, :] = self.h5_file['captions'][ixl, :self.seq_length]
             else:
                 ixl = random.randint(ix1, ix2 - self.seq_per_img + 1)
-                seq = self.h5_file['labels'][ixl: ixl + self.seq_per_img, :self.seq_length]
+                seq = self.h5_file['captions'][ixl: ixl + self.seq_per_img, :self.seq_length]
 
             caption_batch[i * self.seq_per_img: (i + 1) * self.seq_per_img, 1: self.seq_length + 1] = seq
 

@@ -83,12 +83,12 @@ def split_train_test(image_list):
     for i, image_info in enumerate(image_list):
         if i < 5000:
             image_info['split'] = 'val'
-        elif i < 1000:
+        elif i < 10000:
             image_info['split'] = 'test'
         else:
             image_info['split'] = 'train'
 
-    print('Keeping 5000 for validation, 1000 for testing. Train on the rest')
+    print('Keeping 5000 for validation, 5000 for testing. Train on the rest')
 
 
 def encode_captions(image_list, word_to_index):
@@ -194,7 +194,7 @@ def create_dataset():
         h5_dataset[i] = img_resized
         # print the progress of the process
         if i % 1000 == 0:
-            print('Processing {:d}/{:d} ({:.2f%}% done)'.format(i, no_images, i * 100 / no_images))
+            print('Processing {:d}/{:d} ({:.2f}% done)'.format(i, no_images, i * 100 / no_images))
     f.close()
     print('Finished writing the H5 dataset file {}'.format(FLAGS.output_h5))
 
