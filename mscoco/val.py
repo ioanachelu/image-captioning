@@ -14,7 +14,7 @@ FLAGS = tf.app.flags.FLAGS
 
 def validate(step, global_step, sess, model, loader, best_val_score):
     # Do evaluation procedure and if model is better save it
-    if step % FLAGS.checkpoint_every == 0:
+    if step % FLAGS.checkpoint_every == 0 and step > 0:
         eval_kwargs = {'val_images_use': FLAGS.val_images_use,
                        'split': 'val',
                        'language_eval': FLAGS.language_eval,
@@ -39,3 +39,5 @@ def validate(step, global_step, sess, model, loader, best_val_score):
             best_val_score = current_score
             model.saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'model'), global_step=global_step)
             print("model saved to {}".format(os.path.join(FLAGS.checkpoint_dir, 'model')))
+
+        return best_val_score

@@ -30,7 +30,7 @@ def recreate_directory_structure():
 
 
 def train():
-    recreate_directory_structure()
+    # recreate_directory_structure()
 
     # Initialize the data loader class
     loader = DataLoader()
@@ -65,6 +65,7 @@ def train():
 
         # Handle training from scratch vs resuming training from a previously saved model
         if FLAGS.resume:
+            sess.run(tf.global_variables_initializer())
             utils.load_model(model.saver, sess)
             sess.run(tf.local_variables_initializer())
             step = sess.run(global_step)
@@ -93,7 +94,7 @@ def train():
             print('Read data took :', time.time() - start_time)
 
             start_time = time.time()
-            feed = {model.images: data['images'], model.labels: data['captions'], model.masks: data['masks']}
+            feed = {model.images: data['images'], model.captions: data['captions'], model.masks: data['masks']}
 
             if step <= FLAGS.finetune_cnn_after or FLAGS.finetune_cnn_after == -1:
                 train_loss, merged, _, _ = sess.run(
@@ -112,7 +113,7 @@ def train():
                 model.summary_writer.add_summary(merged, step)
                 model.summary_writer.flush()
 
-            val.validate(step, global_step, sess, model, loader, best_val_score)
+            best_val_score = val.validate(step, global_step, sess, model, loader, best_val_score)
 
             step += 1
             if data['bounds']['wrapped']:

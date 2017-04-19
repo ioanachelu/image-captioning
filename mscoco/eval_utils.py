@@ -8,7 +8,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # Evaluate predictions using NLP metrics: BLEU-1, BLEU-2, BLEU-3, BLEU-4, ROUGE and CIDEr. METEOR is skiped because the
 # coco-caption code has some leaks and so as not to mess up the run
-def language_eval(dataset_json, preds):
+def calc_metrics(dataset_json, preds):
     import sys
     # for MSCOCO use the official captions for validation
     if 'coco' in dataset_json:
@@ -47,18 +47,57 @@ def language_eval(dataset_json, preds):
     return out
 
 
-def greey_sampling(model, loader, data, predictions, sess):
+def greedy_sampling(model, loader, data, predictions, sess):
     # do an inverence to get the predicted caption sequences
     feed = {model.images: data['images']}
     seq = sess.run(model.generator, feed)
 
     # decode sequences to words from indexes
     sents = utils.decode_sequence(loader.get_vocab(), seq)
+    # print(sents[0])
 
     #load predictions in a dictionary with image id and predicted captions to be used by the language eval function
     for k, sent in enumerate(sents):
         entry = {'image_id': data['infos'][k]['id'], 'caption': sent}
         predictions.append(entry)
+
+    return predictions
+
+def greedy_sampling_for_test(model, loader, data, predictions, sess):
+    # forward to get predicted caption sequences
+    feed = {model.images: data['images']}
+    seq = sess.run(model.generator, feed)
+
+    # transform caption indices to words from vocabulary
+    sents = utils.decode_sequence(loader.get_vocab(), seq)
+
+    # create prediction dictionary to use with coco-caption
+    for k, sent in enumerate(sents):
+        entry = {'image_id': data['infos'][k]['id'], 'caption': sent}
+        predictions.append(entry)
+
+        # copy images to captions folder using their id as name to be later retrieved using the resulted caption json
+        cmd = 'cp "' + data['infos'][k]['file_path'] + '" captions/img' + str(
+            data['infos'][k]['id']) + '.jpg'  # bit gross
+        print(cmd)
+        os.system(cmd)
+
+    return predictions
+
+
+def beam_search_for_test(model, loader, data, predictions, sess):
+    seq = model.decode(data['images'], FLAGS.beam_search_size, sess)
+    sents = [' '.join([loader.get_vocab().get(str(index), '') for index in sent]).strip() for sent in seq]
+    entry = {'image_id': data['infos'][0]['id'], 'caption': sents[0]}
+    predictions.append(entry)
+
+    # copy images to captions folder using their id as name to be later retrieved using the resulted caption json
+    cmd = 'cp "' + data['infos'][0]['file_path'] + '" captions/img' + str(
+        data['infos'][0]['id']) + '.jpg'  # bit gross
+    print(cmd)
+    os.system(cmd)
+
+    return predictions
 
 
 def beam_search(model, loader, data, predictions, sess):
@@ -66,6 +105,8 @@ def beam_search(model, loader, data, predictions, sess):
     sents = [' '.join([loader.get_vocab().get(str(index), '') for index in sent]).strip() for sent in seq]
     entry = {'image_id': data['infos'][0]['id'], 'caption': sents[0]}
     predictions.append(entry)
+
+    return predictions
 
 
 # Do one step of evaluation using the validation dataset
@@ -92,16 +133,16 @@ def val_eval(sess, model, loader, eval_kwargs):
         step += 1
 
         # forward the model to get loss
-        feed = {model.images: data['images'], model.labels: data['labels'], model.masks: data['masks']}
+        feed = {model.images: data['images'], model.captions: data['captions'], model.masks: data['masks']}
         loss = sess.run(model.loss, feed)
 
         loss_sum = loss_sum + loss
         loss_evals = loss_evals + 1
 
-        if FLAGS.beam_search_size == 1:
-            greey_sampling(model, loader, data, predictions, sess)
-        else:
-            beam_search(model, loader, data, predictions, sess)
+        #if FLAGS.beam_search_size == 1:
+        predictions = greedy_sampling(model, loader, data, predictions, sess)
+        #else:
+        #    predictions = beam_search(model, loader, data, predictions, sess)
 
         ix0 = data['bounds']['it_pos_now']
         ix1 = data['bounds']['it_max']
@@ -121,7 +162,7 @@ def val_eval(sess, model, loader, eval_kwargs):
 
     # Evaluate predictions using coco-caption to get NLP metrics results
     if language_eval:
-        lang_stats = language_eval(dataset, predictions)
+        lang_stats = calc_metrics(dataset, predictions)
 
     # Switch back to training mode
     sess.run(tf.assign(model.training, True))
@@ -154,28 +195,16 @@ def test_eval(sess, model, loader, eval_kwargs):
         step += 1
 
         # forward the model to get loss
-        feed = {model.images: data['images'], model.labels: data['labels'], model.masks: data['masks']}
+        feed = {model.images: data['images'], model.captions: data['captions'], model.masks: data['masks']}
         loss = sess.run(model.loss, feed)
 
         loss_sum = loss_sum + loss
         loss_evals += 1
 
-        # forward to get predicted caption sequences
-        feed = {model.images: data['images']}
-        seq = sess.run(model.generator, feed)
-
-        # transform caption indices to words from vocabulary
-        sents = utils.decode_sequence(loader.get_vocab(), seq)
-
-        # create prediction dictionary to use with coco-caption
-        for k, sent in enumerate(sents):
-            entry = {'image_id': data['infos'][k]['id'], 'caption': sent}
-            predictions.append(entry)
-
-            # copy images to captions folder using their id as name to be later retrieved using the resulted caption json
-            cmd = 'cp "' + data['infos'][k]['file_path'] + '" captions/img' + str(data['infos'][k]['id']) + '.jpg'  # bit gross
-            print(cmd)
-            os.system(cmd)
+        if FLAGS.beam_search_size == 1:
+            predictions = greedy_sampling_for_test(model, loader, data, predictions, sess)
+        else:
+            predictions = beam_search_for_test(model, loader, data, predictions, sess)
 
         # stoped if processed all test images
         ix0 = data['bounds']['it_pos_now']
@@ -192,7 +221,7 @@ def test_eval(sess, model, loader, eval_kwargs):
 
     # Evaluate NLP metrics
     if language_eval:
-        lang_stats = language_eval(dataset, predictions)
+        lang_stats = calc_metrics(dataset, predictions)
 
 
     # Switch back to training mode

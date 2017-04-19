@@ -34,12 +34,28 @@ def clip_by_value(tensor_list, clip_value_min, clip_value_max, name=None):
 
 
 # Transform output_sequence from word indexes to words - index 0 is reserved for EOS
-def decode_sequence(index_to_word, output_sequence):
-    batch, caption_length = output_sequence.shape
+# def decode_sequence(index_to_word, output_sequence):
+#     batch, caption_length = output_sequence.shape
+#     out = []
+#     for i in range(batch):
+#         caption = ' '.join([index_to_word[str(output_sequence[i, j])] for j in range(caption_length) if output_sequence[i, j] > 0])
+#         out.append(caption)
+#     return out
+
+def decode_sequence(index_to_word, seq):
+    N, D = seq.shape
     out = []
-    for i in range(batch):
-        caption = ' '.join([index_to_word[str(output_sequence[i, j])] for j in range(caption_length) if output_sequence[i, j] > 0])
-        out.append(caption)
+    for i in range(N):
+        txt = ''
+        for j in range(D):
+            ix = seq[i,j]
+            if ix > 0 :
+                if j >= 1:
+                    txt = txt + ' '
+                txt = txt + index_to_word[str(ix)]
+            else:
+                break
+        out.append(txt)
     return out
 
 
